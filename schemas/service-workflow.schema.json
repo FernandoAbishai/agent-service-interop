@@ -150,7 +150,7 @@
             "properties": {
               "protocol": {"type": "string"},
               "version_or_date": {"type": "string"},
-              "status": {"enum": ["planned", "generated", "round_tripped", "failed", "not_native"]},
+              "status": {"enum": ["candidate", "planned", "generated", "round_tripped", "failed", "not_native", "deferred"]},
               "artifact_ref": {"type": "string"}
             },
             "additionalProperties": false
