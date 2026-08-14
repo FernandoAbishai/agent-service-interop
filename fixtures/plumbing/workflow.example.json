@@ -1,0 +1,104 @@
+{
+  "schema_version": "0.1.0-experimental",
+  "workflow_id": "wf_plumbing_001",
+  "provider": {
+    "provider_id": "provider_demo_plumbing",
+    "name": "Demo Plumbing Co.",
+    "operational_system": "existing_fsm",
+    "external_refs": {
+      "fsm_customer_id": "cust_1001"
+    }
+  },
+  "requirement": {
+    "requirement_id": "req_001",
+    "service_category": "residential_plumbing.leak_diagnosis",
+    "description": "Water is leaking beneath the kitchen sink when the faucet runs.",
+    "location": {
+      "postal_code": "92101",
+      "country": "US"
+    },
+    "constraints": [
+      "weekday_after_15_00",
+      "tenant_present"
+    ],
+    "attachments": [
+      {
+        "kind": "photo",
+        "uri": "fixture://req_001/photo_01.jpg",
+        "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      }
+    ]
+  },
+  "quote": {
+    "quote_id": "quote_001",
+    "status": "offered",
+    "currency": "USD",
+    "line_items": [
+      {
+        "description": "Diagnostic visit",
+        "amount": 89.0
+      },
+      {
+        "description": "Replace sink P-trap assembly if confirmed during diagnosis",
+        "amount": 145.0
+      }
+    ],
+    "total": 234.0,
+    "valid_until": "2026-08-18T23:59:59Z",
+    "source_system_ref": "fsm_estimate_7781",
+    "representation_refs": {
+      "aip_offer": "fixture://aip/offers/quote_001.json",
+      "ubl_quotation": "fixture://ubl/quotation/quote_001.xml"
+    }
+  },
+  "job": {
+    "job_id": "job_001",
+    "status": "scheduled",
+    "source_system_ref": "fsm_job_9917",
+    "scheduled_for": "2026-08-17T22:00:00Z",
+    "status_updated_at": "2026-08-14T22:30:00Z"
+  },
+  "completion": {
+    "provider_claim": {
+      "status": "not_claimed"
+    },
+    "evidence": []
+  },
+  "customer_decision": {
+    "status": "pending",
+    "decision_mode": "human_reviewed",
+    "evidence_refs": []
+  },
+  "provenance": {
+    "canonical_created_at": "2026-08-14T22:30:00Z",
+    "adapter": "demo-file-adapter@0.1.0",
+    "source_revision": "fsm_job_9917:r3",
+    "protocol_views": [
+      {
+        "protocol": "AIP",
+        "version_or_date": "0.1.0",
+        "status": "planned"
+      },
+      {
+        "protocol": "UCP",
+        "version_or_date": "2026-04-08 stable + current-draft semantics tracked separately",
+        "status": "planned"
+      },
+      {
+        "protocol": "UBL",
+        "version_or_date": "2.1",
+        "status": "planned"
+      },
+      {
+        "protocol": "MCP",
+        "version_or_date": "not-yet-targeted",
+        "status": "not_native"
+      },
+      {
+        "protocol": "A2A",
+        "version_or_date": "not-yet-targeted",
+        "status": "not_native"
+      }
+    ]
+  }
+}
