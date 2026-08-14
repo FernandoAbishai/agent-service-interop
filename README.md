@@ -14,19 +14,19 @@ The first experiment asks whether one canonical operational model can sit betwee
 
 - an existing business workflow;
 - Agent Intake Protocol (AIP) for discovery/intake/offer/bind;
-- Universal Commerce Protocol (UCP) where its current commerce semantics fit;
+- a second independent agent-facing representation selected only after semantic-fit evaluation;
 - legacy quotation semantics such as OASIS UBL;
 - later MCP and Agent2Agent surfaces;
 - later settlement/verification adapters.
 
-The initial scope is deliberately narrow: **one plumbing workflow, one canonical model, two agent-facing surfaces, no workflow replacement**.
+The initial scope is deliberately narrow: **one plumbing workflow, one canonical model, AIP first, no workflow replacement**.
 
 ```text
 Agent / buyer
     |
     +--> AIP ------------------+
     |                          |
-    +--> UCP-compatible view --+--> canonical operational model
+    +--> second view (TBD) ----+--> canonical operational model
                                       |
                                       v
                               existing business workflow
@@ -77,7 +77,7 @@ These are version-sensitive and must be rechecked before implementation:
 
 ## Pass condition
 
-The first experiment passes only if one plumbing workflow can be represented once, surfaced through at least AIP plus one independent second surface, and round-tripped back into the existing operational workflow without requiring the business to replace that workflow.
+The first experiment passes only if one plumbing workflow can be represented once, surfaced through AIP plus one independently justified second surface, and round-tripped back into the existing operational workflow without requiring the business to replace that workflow.
 
 ## Failure is useful
 
