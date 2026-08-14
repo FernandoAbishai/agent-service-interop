@@ -11,7 +11,8 @@ Tier 1 is intentionally smaller than a product prototype.
 **Vertical:** residential plumbing  
 **Workflow:** leak diagnosis -> quote -> approval -> scheduled job -> completion -> customer decision  
 **Canonical state:** `schemas/service-workflow.schema.json`  
-**First external surfaces:** AIP and one UCP-compatible representation where current UCP semantics actually fit  
+**First external surface:** AIP  
+**Second external surface:** not preselected; choose only after semantic-fit evaluation  
 **Legacy semantic reference:** UBL 2.1 quotation concepts  
 **Operational source:** a file-backed mock representing an existing FSM before connecting a real provider API
 
@@ -41,7 +42,7 @@ A quote accepted through one surface must resolve to the same canonical quote/jo
 
 ### Missing semantics stay missing
 
-When a protocol lacks a native representation, the experiment records `not_native` or uses a clearly labeled adapter envelope. It must not overload unrelated fields merely to make a demo appear complete.
+When a protocol lacks a native representation, the experiment records the boundary explicitly or uses a clearly labeled adapter envelope. It must not overload unrelated fields merely to make a demo appear complete.
 
 ### Every protocol fixture is version-pinned
 
@@ -69,11 +70,17 @@ Generate from the canonical/provider configuration:
 
 The business should not manually author AIP JSON.
 
-## Phase C — second independent view
+## Phase C — select and implement the second independent view
 
-Evaluate the current UCP specification and expose only what fits natively. Where UCP does not provide generic semantics for a plumbing service offering or quote lifecycle, document the boundary rather than inventing protocol-native support.
+Do not assume UCP is the correct second representation.
+
+Evaluate candidate surfaces against the plumbing workflow and select one only if it provides an independently meaningful agent-facing view without inventing protocol-native semantics.
+
+Candidates may include UCP where its current commerce semantics fit, UBL-derived exchange semantics exposed through an agent surface, or another relevant protocol identified during implementation.
 
 The second view must still link back to the same canonical provider, requirement, quote and job references.
+
+If no candidate provides a useful independent view without substantial semantic distortion, record that as a negative result rather than forcing a second protocol.
 
 ## Phase D — round trip into operational workflow
 
@@ -104,18 +111,20 @@ Tier 1 models the first three and leaves verifier/settlement integration for a l
 
 The interoperability hypothesis receives initial support only if all are true:
 
-1. one canonical plumbing fixture is sufficient to generate two useful external views;
+1. one canonical plumbing fixture is sufficient to generate AIP plus one independently justified second external view;
 2. both views preserve stable references to the same requirement/quote/job state;
 3. a simulated external interaction can round-trip into the existing operational workflow;
 4. the operational system remains authoritative for execution;
 5. no protocol-specific fork of the canonical workflow is required for core business state;
 6. translation loss is documented and bounded rather than hidden.
 
+If no honest second view can be found, Tier 1 does not pass merely because AIP works.
+
 ## Falsification conditions
 
 The hypothesis should be narrowed or rejected if:
 
-- AIP/UCP/current standards already solve the deployment integration without a meaningful adapter layer;
+- AIP/current standards already solve the deployment integration without a meaningful adapter layer;
 - a canonical representation destroys vertical-specific semantics required for decisions;
 - every protocol requires a substantially different internal model;
 - adapter maintenance costs approach workflow replacement costs;
