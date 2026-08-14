@@ -1,0 +1,164 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/agent-service-interop/schemas/service-workflow.schema.json",
+  "title": "Experimental Service Workflow",
+  "description": "EXPERIMENTAL translation model for the agent-service-interop plumbing experiment. Not a protocol or standards proposal.",
+  "type": "object",
+  "required": ["schema_version", "workflow_id", "provider", "requirement", "quote", "job", "completion", "customer_decision", "provenance"],
+  "properties": {
+    "schema_version": {"const": "0.1.0-experimental"},
+    "workflow_id": {"type": "string", "minLength": 1},
+    "provider": {
+      "type": "object",
+      "required": ["provider_id", "name", "operational_system"],
+      "properties": {
+        "provider_id": {"type": "string"},
+        "name": {"type": "string"},
+        "operational_system": {"type": "string"},
+        "external_refs": {"type": "object", "additionalProperties": {"type": "string"}}
+      },
+      "additionalProperties": false
+    },
+    "requirement": {
+      "type": "object",
+      "required": ["requirement_id", "service_category", "description", "location", "constraints"],
+      "properties": {
+        "requirement_id": {"type": "string"},
+        "service_category": {"type": "string"},
+        "description": {"type": "string"},
+        "location": {
+          "type": "object",
+          "required": ["postal_code"],
+          "properties": {
+            "postal_code": {"type": "string"},
+            "country": {"type": "string"}
+          },
+          "additionalProperties": true
+        },
+        "constraints": {"type": "array", "items": {"type": "string"}},
+        "attachments": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["kind", "uri"],
+            "properties": {
+              "kind": {"type": "string"},
+              "uri": {"type": "string"},
+              "sha256": {"type": "string"}
+            },
+            "additionalProperties": false
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "quote": {
+      "type": "object",
+      "required": ["quote_id", "status", "currency", "line_items", "total", "valid_until"],
+      "properties": {
+        "quote_id": {"type": "string"},
+        "status": {"enum": ["not_requested", "requested", "offered", "accepted", "rejected", "expired", "revised"]},
+        "currency": {"type": "string", "pattern": "^[A-Z]{3}$"},
+        "line_items": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["description", "amount"],
+            "properties": {
+              "description": {"type": "string"},
+              "amount": {"type": "number", "minimum": 0}
+            },
+            "additionalProperties": false
+          }
+        },
+        "total": {"type": "number", "minimum": 0},
+        "valid_until": {"type": "string", "format": "date-time"},
+        "source_system_ref": {"type": "string"},
+        "representation_refs": {"type": "object", "additionalProperties": {"type": "string"}}
+      },
+      "additionalProperties": false
+    },
+    "job": {
+      "type": "object",
+      "required": ["job_id", "status", "source_system_ref"],
+      "properties": {
+        "job_id": {"type": "string"},
+        "status": {"enum": ["pending", "scheduled", "in_progress", "blocked", "completed", "canceled"]},
+        "source_system_ref": {"type": "string"},
+        "scheduled_for": {"type": "string", "format": "date-time"},
+        "status_updated_at": {"type": "string", "format": "date-time"}
+      },
+      "additionalProperties": false
+    },
+    "completion": {
+      "type": "object",
+      "required": ["provider_claim", "evidence"],
+      "properties": {
+        "provider_claim": {
+          "type": "object",
+          "required": ["status"],
+          "properties": {
+            "status": {"enum": ["not_claimed", "completed", "partially_completed", "unable_to_complete"]},
+            "claimed_at": {"type": "string", "format": "date-time"},
+            "work_summary": {"type": "string"}
+          },
+          "additionalProperties": false
+        },
+        "evidence": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["evidence_id", "kind", "source", "uri"],
+            "properties": {
+              "evidence_id": {"type": "string"},
+              "kind": {"enum": ["photo", "signature", "checklist", "note", "timespan", "document", "other"]},
+              "source": {"type": "string"},
+              "uri": {"type": "string"},
+              "sha256": {"type": "string"},
+              "observed_at": {"type": "string", "format": "date-time"}
+            },
+            "additionalProperties": false
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "customer_decision": {
+      "type": "object",
+      "required": ["status", "decision_mode"],
+      "properties": {
+        "status": {"enum": ["pending", "accepted", "rejected", "disputed", "follow_up_requested"]},
+        "decision_mode": {"enum": ["human_reviewed", "agent_delegated", "unknown"]},
+        "decided_at": {"type": "string", "format": "date-time"},
+        "reason": {"type": "string"},
+        "evidence_refs": {"type": "array", "items": {"type": "string"}}
+      },
+      "additionalProperties": false
+    },
+    "provenance": {
+      "type": "object",
+      "required": ["canonical_created_at", "adapter"],
+      "properties": {
+        "canonical_created_at": {"type": "string", "format": "date-time"},
+        "adapter": {"type": "string"},
+        "source_revision": {"type": "string"},
+        "protocol_views": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["protocol", "version_or_date", "status"],
+            "properties": {
+              "protocol": {"type": "string"},
+              "version_or_date": {"type": "string"},
+              "status": {"enum": ["planned", "generated", "round_tripped", "failed", "not_native"]},
+              "artifact_ref": {"type": "string"}
+            },
+            "additionalProperties": false
+          }
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}
