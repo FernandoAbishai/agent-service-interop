@@ -31,7 +31,7 @@
   },
   "quote": {
     "quote_id": "quote_001",
-    "status": "offered",
+    "status": "accepted",
     "currency": "USD",
     "line_items": [
       {
@@ -45,11 +45,7 @@
     ],
     "total": 234.0,
     "valid_until": "2026-08-18T23:59:59Z",
-    "source_system_ref": "fsm_estimate_7781",
-    "representation_refs": {
-      "aip_offer": "fixture://aip/offers/quote_001.json",
-      "ubl_quotation": "fixture://ubl/quotation/quote_001.xml"
-    }
+    "source_system_ref": "fsm_estimate_7781"
   },
   "job": {
     "job_id": "job_001",
@@ -81,23 +77,23 @@
       },
       {
         "protocol": "UCP",
-        "version_or_date": "2026-04-08 stable + current-draft semantics tracked separately",
-        "status": "planned"
+        "version_or_date": "evaluate-current-version-before-use",
+        "status": "candidate"
       },
       {
         "protocol": "UBL",
         "version_or_date": "2.1",
-        "status": "planned"
+        "status": "candidate"
       },
       {
         "protocol": "MCP",
         "version_or_date": "not-yet-targeted",
-        "status": "not_native"
+        "status": "deferred"
       },
       {
         "protocol": "A2A",
         "version_or_date": "not-yet-targeted",
-        "status": "not_native"
+        "status": "deferred"
       }
     ]
   }
