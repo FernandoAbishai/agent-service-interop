@@ -14,32 +14,23 @@ The experiment asks whether one normalized canonical interoperability representa
 
 - an existing business workflow;
 - Agent Intake Protocol (AIP) for discovery/intake/offer/bind;
-- a second independent agent-facing representation selected only after semantic-fit evaluation;
+- Agent2Agent (A2A) v1.0 as an independently meaningful agent-to-agent interaction surface;
 - legacy quotation semantics such as OASIS UBL;
-- later MCP and Agent2Agent surfaces;
-- later settlement/verification adapters.
+- later MCP and settlement/verification adapters.
 
-The initial scope is deliberately narrow: **one plumbing workflow, one normalized representation, AIP first, no workflow replacement**.
+The scope remains deliberately narrow: **one plumbing workflow, one normalized representation, AIP + A2A, no workflow replacement**.
 
 ```text
-Agent / buyer
-    |
-    v
-AIP surface
-    |
-    v
-adapter / command boundary
-    |
-    v
-existing business workflow  <-- operational authority
-    |
-    | confirmed outcome
-    v
-normalized canonical representation
-    |
-    +--> AIP projection
-    +--> second independent view (TBD)
+AIP buyer flow --------------------+
+                                   |
+A2A provider-agent inspection -----+--> normalized interoperability view
+                                             |
+                                             v
+                                   existing business workflow
+                                     <-- operational authority
 ```
+
+AIP and A2A retain their own protocol identities. They reference the same underlying requirement, quote, and operational job rather than creating protocol-specific copies of those objects.
 
 ## What this repository is not
 
@@ -63,7 +54,7 @@ This preserves a path from a simple derived projection toward multi-system inter
 
 See [`docs/architecture.md`](docs/architecture.md) for the authority model, invariants, open questions, and falsification conditions.
 
-## Current implementation: AIP -> file-backed FSM
+## AIP implementation
 
 The first executable adapter is pinned to **AIP v0.1.0 / specification snapshot 2026-02-27**. It models a direct plumbing provider rather than a marketplace.
 
@@ -77,35 +68,59 @@ The intake is deliberately privacy-minimized: postal code and non-identifying se
 
 For this experiment, **Bind is an authorized handoff to the provider's operational workflow**. It is not represented as payment, job completion, or a universal booking primitive. The file-backed FSM remains authoritative for quote acceptance and job scheduling.
 
-The confirmed FSM result is then projected into the normalized canonical representation. AIP does not directly mutate canonical quote/job state.
+The generated/consumed AIP manifest, intake request, offer response, and bind request are automatically checked against vendored upstream JSON Schemas from the pinned 2026-02-27 snapshot. This is stronger evidence than local shape checks, but it is not AIP certification or proof of full interoperability.
 
-The bind response is adapter-local because AIP v0.1.0 defines a bind-request schema but does not define a normative bind-response schema.
+The bind response remains adapter-local because AIP v0.1.0 defines a bind-request schema but does not define a normative bind-response schema.
 
-### Run locally
+## A2A implementation
+
+The second surface uses the official **A2A JavaScript SDK v1.0.1** and exposes **A2A Protocol v1.0 over HTTP+JSON**.
+
+Endpoints/surfaces:
+
+- `GET /.well-known/agent-card.json`
+- HTTP+JSON A2A binding under `/a2a`
+- one skill: `inspect_service_workflow`
+
+The skill is deliberately read-only. It accepts an existing canonical workflow ID or AIP session ID and returns an A2A Artifact containing references to the same:
+
+- canonical `workflow_id`;
+- `requirement_id`;
+- `quote_id`;
+- AIP `offer_id`;
+- operational `job_id`.
+
+The A2A Task has its own ID and context. It is not the FSM job. A completed read-only A2A Task means the provider-agent interaction completed; it does **not** mean the physical service job completed or that the customer accepted fulfillment.
+
+This distinction is executable in the tests: the A2A Task can be `TASK_STATE_COMPLETED` while the authoritative FSM job remains `scheduled`, completion remains `not_claimed`, and customer decision remains `pending`.
+
+## Run locally
 
 Requires Node.js 22.16+; CI runs Node 24.
 
 ```bash
+npm install
 npm test
-npm start
+npm start       # AIP server, default port 3000
+npm run start:a2a  # A2A server, default port 3001
 ```
 
-By default runtime state is written under `.runtime/`. This adapter is a research fixture, not a production service.
+Both servers use the same `.runtime/fsm-state.json` by default, so an AIP-created workflow can be inspected through A2A without creating a second operational record.
 
-### What the tests currently demonstrate
+## What the tests currently demonstrate
 
-- direct-provider AIP manifest generation;
-- UUID/session and consent checks;
-- privacy-minimized intake;
-- offer creation and expiry;
-- session/agent correlation;
-- Bind-level PII handoff;
-- quote transition `offered -> accepted`;
-- job transition `pending -> scheduled` in the existing-system mock;
-- idempotent repeated intake for the same session;
-- projection of confirmed FSM state back into the experimental canonical representation.
+- AIP v0.1.0 upstream-schema validation for manifest/intake/offer/bind-request artifacts;
+- privacy-minimized AIP intake and Bind-level PII handoff;
+- quote transition `offered -> accepted` and job transition `pending -> scheduled` in the existing-system mock;
+- projection of confirmed FSM state into the experimental canonical representation;
+- official A2A Agent Card discovery and HTTP+JSON client/server interaction;
+- one AIP-created workflow exposed through a second independent A2A surface;
+- AIP and A2A resolving to the same requirement/quote/job references;
+- protocol IDs remaining separate from canonical and FSM identities;
+- A2A Task state remaining semantically separate from physical-service Job state;
+- read-only A2A inspection not mutating the file-backed FSM.
 
-These tests are **not a claim of full AIP conformance**. Automatic validation against the upstream AIP JSON Schemas remains a separate gate.
+These results are evidence for the current synthetic workflow only. They do not yet demonstrate interoperability against a real FSM/API or multiple operational systems.
 
 ## Evidence backbone
 
@@ -124,31 +139,26 @@ See:
 These are version-sensitive and must be rechecked before implementation changes:
 
 - **AIP v0.1.0** exposes `/.well-known/agent-intake.json` and a Discover -> Submit -> Offer -> Review -> Bind lifecycle.
+- **A2A v1.0** is used here only for agent discovery/interaction/task/artifact mechanics; quote, physical job execution, fulfillment, and customer acceptance remain application/business semantics.
 - **UCP** uses `/.well-known/ucp` to advertise UCP services/capabilities/payment handlers. In UCP, a *Service* is an API surface/vertical concept; it must not be confused with a plumber's commercial service offering.
-- **UCP namespace authority rules have changed across versions.** This repository records the version/date when relying on `schema` or `spec` authority behavior.
 - **MCP Tasks** address durable/asynchronous tool-operation mechanics, not the business meaning of physical-service completion.
-- **Agent2Agent (A2A)** is a distinct protocol from Agentic Commerce Protocol (ACP).
 
-## Pass condition
+## Current pass / remaining falsification
 
-The broader experiment passes only if one plumbing workflow can be normalized without losing decision-critical semantics, surfaced through AIP plus one independently justified second surface, and round-tripped back into the authoritative operational workflow without requiring the business to replace that workflow.
+The repository now has executable evidence that **one synthetic plumbing workflow can support two independent agent-facing representations, AIP and A2A, without protocol-specific copies of the quote/job state**.
 
-The AIP adapter alone is therefore evidence for one translation boundary, not proof of the full interoperability thesis.
+The broader deployment thesis is still unproven. It should be revised or narrowed if any of these occur:
 
-## Failure is useful
-
-The thesis should be revised or narrowed if any of these occur:
-
-- existing protocols already provide the needed deployment integration cleanly;
 - canonical normalization loses decision-critical business semantics;
 - most useful state proves system-specific and resists a stable normalized core;
 - adapter or reconciliation burden is comparable to replacing the workflow;
 - authoritative business systems do not expose enough operational state to support safe translation;
-- independent agent surfaces require incompatible internal models for the same business state.
+- a real second operational system cannot map to the same useful normalized core;
+- existing unified APIs or integration platforms already provide the authority-aware agent coordination layer cleanly.
 
 ## Status
 
-**Experimental / research.** No protocol standing, no production guarantees, and no interoperability claim beyond checked fixtures and test runs.
+**Experimental / research.** No protocol standing, no production guarantees, and no interoperability claim beyond checked fixtures and executable tests.
 
 ## License
 
