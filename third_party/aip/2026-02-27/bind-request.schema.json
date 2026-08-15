@@ -1,0 +1,61 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agent-intake-protocol.github.io/agent-intake-protocol/spec/2026-02-27/bind-request.schema.json",
+  "title": "AIP Bind Request",
+  "description": "Schema for binding requests sent by an agent after the user accepts a soft-contract offer.",
+  "type": "object",
+  "required": ["offer_id", "session_id", "bind_data", "agent"],
+  "properties": {
+    "offer_id": {"type": "string", "description": "The ID of the offer being accepted, as returned in the offer response.", "minLength": 1},
+    "session_id": {"type": "string", "description": "The session ID from the original intake request.", "format": "uuid"},
+    "bind_data": {
+      "type": "object",
+      "description": "User-authorized data required to complete the binding. Fields must match the bind_requires array from the offer.",
+      "properties": {
+        "email": {"type": "string", "description": "User's email address.", "format": "email"},
+        "full_name": {"type": "string", "description": "User's full name.", "minLength": 1},
+        "phone": {"type": "string", "description": "User's phone number."},
+        "company": {"type": "string", "description": "User's company or organization name."},
+        "address": {
+          "type": "object",
+          "description": "User's address.",
+          "properties": {
+            "street": {"type": "string"},
+            "city": {"type": "string"},
+            "state": {"type": "string"},
+            "postal_code": {"type": "string"},
+            "country": {"type": "string"}
+          }
+        }
+      },
+      "additionalProperties": true
+    },
+    "agent": {
+      "type": "object",
+      "description": "Agent information, updated with bind-level consent.",
+      "required": ["id", "consent_scope"],
+      "properties": {
+        "id": {"type": "string", "description": "The agent's identifier, matching the original intake request.", "minLength": 1},
+        "consent_scope": {
+          "type": "array",
+          "description": "Updated consent scopes that now include bind authorization.",
+          "items": {"type": "string", "enum": ["intake", "offer", "bind", "account_creation", "payment"]},
+          "minItems": 1,
+          "uniqueItems": true,
+          "contains": {"const": "bind"}
+        }
+      },
+      "additionalProperties": false
+    },
+    "metadata": {
+      "type": "object",
+      "description": "Optional metadata about the bind request.",
+      "properties": {
+        "timestamp": {"type": "string", "format": "date-time"},
+        "user_confirmed_at": {"type": "string", "description": "Timestamp when the user explicitly confirmed the binding.", "format": "date-time"}
+      },
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": false
+}
