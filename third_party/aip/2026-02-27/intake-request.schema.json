@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agent-intake-protocol.github.io/agent-intake-protocol/spec/2026-02-27/intake-request.schema.json",
+  "title": "AIP Intake Request",
+  "description": "Schema for intake submissions sent by an AI agent to a business's intake endpoint.",
+  "type": "object",
+  "required": ["aip_version", "agent", "intake_data", "session_id"],
+  "properties": {
+    "aip_version": {"type": "string", "description": "The version of the AIP protocol this request conforms to.", "pattern": "^\\d+\\.\\d+\\.\\d+$", "examples": ["0.1.0"]},
+    "agent": {
+      "type": "object",
+      "description": "Information about the AI agent making the request.",
+      "required": ["id", "consent_scope"],
+      "properties": {
+        "id": {"type": "string", "description": "Unique identifier for the agent instance.", "minLength": 1},
+        "platform": {"type": "string", "description": "The platform or provider of the agent.", "examples": ["anthropic", "openai", "google", "custom"]},
+        "name": {"type": "string", "description": "Human-readable name of the agent."},
+        "consent_scope": {"type": "array", "description": "Scopes the user has authorized for this interaction.", "items": {"type": "string", "enum": ["intake", "offer", "bind", "account_creation", "payment"]}, "minItems": 1, "uniqueItems": true}
+      },
+      "additionalProperties": false
+    },
+    "intake_data": {"type": "object", "description": "The structured intake data, conforming to the input_schema defined in the manifest."},
+    "session_id": {"type": "string", "description": "A unique session identifier (UUID v4) for correlating request and response.", "format": "uuid"},
+    "metadata": {
+      "type": "object",
+      "description": "Optional metadata about the request.",
+      "properties": {
+        "timestamp": {"type": "string", "description": "ISO 8601 timestamp of when the request was created.", "format": "date-time"},
+        "locale": {"type": "string", "description": "The user's locale preference.", "pattern": "^[a-z]{2}(-[A-Z]{2})?$", "examples": ["en", "en-US", "es", "fr-FR"]},
+        "timezone": {"type": "string", "description": "The user's timezone.", "examples": ["America/New_York", "Europe/London", "Asia/Tokyo"]}
+      },
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": false
+}
