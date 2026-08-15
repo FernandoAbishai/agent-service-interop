@@ -89,7 +89,11 @@ function sessionIdFromReference(reference: { workflowId?: string; sessionId?: st
 }
 
 export class PlumbingWorkflowAgentExecutor implements AgentExecutor {
-  constructor(private readonly store: FileFsmStore) {}
+  private readonly store: FileFsmStore;
+
+  constructor(store: FileFsmStore) {
+    this.store = store;
+  }
 
   async execute(context: RequestContext, eventBus: ExecutionEventBus): Promise<void> {
     const taskId = context.taskId;
