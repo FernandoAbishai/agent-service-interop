@@ -1,0 +1,77 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agent-intake-protocol.github.io/agent-intake-protocol/spec/2026-02-27/agent-intake.schema.json",
+  "title": "AIP Agent Intake Manifest",
+  "description": "Schema for the /.well-known/agent-intake.json manifest file. Describes available intake endpoints for AI agent discovery.",
+  "type": "object",
+  "required": ["aip_version", "provider", "intakes"],
+  "properties": {
+    "aip_version": {"type": "string", "description": "The version of the AIP protocol this manifest conforms to.", "pattern": "^\\d+\\.\\d+\\.\\d+$", "examples": ["0.1.0"]},
+    "provider": {
+      "type": "object",
+      "description": "Information about the business or service provider.",
+      "required": ["name", "url"],
+      "properties": {
+        "name": {"type": "string", "description": "Human-readable name of the provider.", "minLength": 1},
+        "url": {"type": "string", "description": "The provider's primary URL.", "format": "uri"},
+        "description": {"type": "string", "description": "Brief description of the provider and their services."},
+        "logo": {"type": "string", "description": "URL to the provider's logo image.", "format": "uri"},
+        "contact_email": {"type": "string", "description": "Contact email for AIP-related inquiries.", "format": "email"}
+      },
+      "additionalProperties": false
+    },
+    "intakes": {
+      "type": "array",
+      "description": "List of available intake endpoints.",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["id", "name", "description", "endpoint", "method", "input_schema", "offer_type", "binding_available"],
+        "properties": {
+          "id": {"type": "string", "description": "Unique identifier for this intake within the provider.", "pattern": "^[a-z0-9-]+$"},
+          "name": {"type": "string", "description": "Human-readable name of the intake."},
+          "description": {"type": "string", "description": "Detailed description of what this intake does and what the agent should submit."},
+          "endpoint": {"type": "string", "description": "The URL to POST intake submissions to.", "format": "uri"},
+          "method": {"type": "string", "description": "HTTP method for the intake endpoint.", "enum": ["POST"], "default": "POST"},
+          "category": {"type": "string", "description": "Category classification for this intake.", "pattern": "^[a-z]+/[a-z_]+$", "examples": ["health/assessment", "service/matching", "saas/onboarding", "finance/quote", "tool/calculator", "b2b/vendor"]},
+          "input_schema": {"type": "object", "description": "JSON Schema describing the expected intake_data payload. Agents use this to construct their submission."},
+          "offer_type": {"type": "string", "description": "The type of offer the business will return.", "examples": ["personalized_recommendation", "quote", "matched_providers", "computed_result", "trial_setup"]},
+          "binding_available": {"type": "boolean", "description": "Whether the user can bind (commit) to the offer. False for calculators and tools that only return results."},
+          "requires_auth": {"type": "boolean", "description": "Whether the intake endpoint requires authentication.", "default": false},
+          "privacy": {
+            "type": "object",
+            "description": "Privacy and data handling declarations.",
+            "properties": {
+              "data_retention": {"type": "string", "description": "How long intake data is retained.", "enum": ["none", "session", "30_days", "1_year", "indefinite"]},
+              "pii_required": {"type": "boolean", "description": "Whether the intake requires personally identifiable information.", "default": false},
+              "redacted_acceptable": {"type": "boolean", "description": "Whether redacted or range-based data is acceptable for the intake.", "default": true}
+            },
+            "additionalProperties": false
+          },
+          "rate_limit": {
+            "type": "object",
+            "description": "Rate limiting information for the intake endpoint.",
+            "properties": {
+              "requests_per_minute": {"type": "integer", "minimum": 1},
+              "requests_per_day": {"type": "integer", "minimum": 1}
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "certification": {
+      "type": "object",
+      "description": "AIP Registry certification information.",
+      "properties": {
+        "registry": {"type": "string", "description": "URL of the certifying registry.", "format": "uri"},
+        "certified": {"type": "boolean", "description": "Whether this manifest has been certified."},
+        "cert_id": {"type": "string", "description": "The certification ID issued by the registry.", "pattern": "^aip-cert-\\d{4}-\\d{5}$"},
+        "expires": {"type": "string", "description": "Certification expiry date.", "format": "date"}
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}
