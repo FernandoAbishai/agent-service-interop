@@ -4,7 +4,7 @@ _Last updated: 2026-08-15_
 
 ## Current stage
 
-**Tier 4 — second operational shape under falsification**
+**Tier 5 — cross-system Occurrence mapping with live Jobber gate pending**
 
 No production interoperability or protocol-certification claims are made.
 
@@ -32,10 +32,14 @@ No production interoperability or protocol-certification claims are made.
 - [x] Native Job completion observation without payment inference
 - [x] Generic Occurrence observation vocabulary projected from ServiceTitan Appointments
 - [x] Relationship gate documented without canonical schema migration
+- [x] Jobber-shaped Visit -> Occurrence projection with nullable schedule
+- [x] Read-only paginated Jobber GraphQL observation boundary
+- [x] Deterministic synthetic Jobber contract tests with no credentials
+- [x] Opt-in live Jobber contract test
 - [x] GitHub Actions test workflow
-- [ ] Independent second-source Occurrence mapping (for example Jobber Visit)
+- [ ] Live Jobber test-account run with a temporary authorized token
 - [ ] Real ServiceTitan/API adapter
-- [ ] Multi-system authority/provenance test
+- [ ] Multi-system authority/provenance test against two live systems
 - [ ] Completion/evidence interoperability tests
 - [ ] Settlement adapter experiment
 - [ ] Agave adapter-substrate experiment
@@ -57,11 +61,13 @@ No production interoperability or protocol-certification claims are made.
 | A single `job.scheduled_for` can faithfully represent ServiceTitan-shaped scheduling | Falsified by fixture: one Job has multiple Appointments with independent windows |
 | Every sold Estimate must already have a Job relationship | Falsified by fixture |
 | Provider completion must be inferred from payment/invoice state | Rejected for ServiceTitan-shaped observation; native Job status/completed timestamp are preserved |
-| A distinct work-occurrence observation is justified | Supported for ServiceTitan-shaped evidence; cross-system portability still requires an independent executable mapping |
-| A universal normalized occurrence lifecycle enum is justified | Not yet supported; source-native status remains verbatim |
+| A distinct work-occurrence observation is justified | Supported by ServiceTitan Appointment plus deterministic Jobber Visit mappings; live Jobber verification remains pending |
+| An unscheduled occurrence requires invented timing | Rejected by the Jobber-shaped mapping; null start/end are preserved |
+| A universal normalized occurrence lifecycle enum is justified | Not supported; ServiceTitan and Jobber source-native statuses remain verbatim |
+| `clientConfirmed` can be promoted to customer economic acceptance | Rejected for this experiment; it remains source-native Visit data |
 | `accepted_as`, `offered_via`, and `converted_from` are stable canonical relationships | Not yet supported as a package; documented as candidates/deferred semantics only |
-| One useful normalized core can survive multiple operational systems | Under active falsification; current canonical schema is intentionally unchanged |
-| Existing real business workflows can remain authoritative while becoming agent-accessible | Still untested against live credentials/API |
+| One useful normalized core can survive multiple operational systems | Promising at the observation layer; canonical-schema promotion still withheld pending live evidence |
+| Existing real business workflows can remain authoritative while becoming agent-accessible | Implementation path exists for Jobber; live API verification still pending |
 | Adapter/interoperability infrastructure is a meaningful deployment wedge | Working hypothesis, not a fact |
 
 ## Authority model
@@ -88,7 +94,7 @@ operational system
   -> protocol projection
 ```
 
-The ServiceTitan-shaped experiment is read-only. It preserves source-native Job, Appointment and Estimate identities/statuses before any decision is made about canonical repair.
+The Jobber work in this stage is read-only. Jobber remains authoritative for its Job and Visit state; the adapter preserves Jobber IDs/statuses before projecting only the already-earned Occurrence fields.
 
 ## Current implementation boundary
 
@@ -102,38 +108,36 @@ Uses **A2A Protocol v1.0** through official `@a2a-js/sdk@1.0.1`, with one HTTP+J
 
 ### ServiceTitan-shaped second system
 
-The current second-system work is a fixture-backed observation boundary, not a live ServiceTitan integration. It deliberately preserves:
-
-- Job identity and source status;
-- one-to-many Appointment identities and scheduling windows;
-- Estimate identity with optional Job relationship;
-- native completion basis from Job state;
-- observation timestamps and source-system provenance.
+The current ServiceTitan work is a fixture-backed observation boundary, not a live ServiceTitan integration. It preserves Job, Appointment and Estimate identities/statuses, one-to-many Appointment schedules, and native Job completion basis.
 
 ### Occurrence architecture gate
 
-PR #6 treats a separately identified scheduled work unit as an **Occurrence observation candidate**, not a new authoritative workflow entity and not a schema migration.
-
-The current executable projection preserves:
+The observation layer has one small cross-system vocabulary:
 
 - source system;
 - source object type and ID;
 - source-native status;
 - observation timestamp;
 - explicit parent reference;
-- independent schedule/arrival windows.
+- nullable independent schedule/arrival windows.
 
-No universal `occurrence_state`, `work_state`, `offer_state`, `source_revision`, graph store, or generic relationship engine is introduced. Provider completion remains separate from customer acceptance, and completion granularity remains under falsification rather than being forced to occurrence scope.
+ServiceTitan Appointment and Jobber Visit both project into this vocabulary without a normalized lifecycle enum. Provider completion and customer acceptance remain separate semantics.
 
-See [`docs/relationship-gate.md`](docs/relationship-gate.md).
+### Jobber live gate
+
+PR #7 adds a read-only Jobber GraphQL client and pagination-aware Job/Visit observer pinned by default to API version `2025-04-16`.
+
+Deterministic CI uses synthetic official-shaped data only. The live contract test is opt-in and requires a temporary test-account token plus a seeded Job ID. No token, authorization code, client secret, refresh token, or customer data belongs in the repository.
+
+See [`docs/jobber/pr7-live-contract.md`](docs/jobber/pr7-live-contract.md).
 
 ## Next gate
 
-The highest-value next evidence is an **independent second-source occurrence mapping**, rather than another protocol or a schema migration.
+Do **not** migrate `Occurrence` into `service-workflow.schema.json` yet.
 
-A Jobber-shaped Visit fixture is a strong candidate because it can test whether the current `OccurrenceObservation` fields survive a different operational vocabulary and allow nullable/unscheduled windows without adding vendor-specific core fields.
+The immediate evidence gate is a live Jobber test-account run containing scheduled, unscheduled, completed, and incomplete Visits. If the same mapping passes against the real API, the project can then decide whether Occurrence has earned canonical-schema status or should remain an observation-layer concept.
 
-Only after that result should the project decide whether Occurrence belongs in the canonical schema itself or remains an observation-layer interoperability concept.
+After that, the next operational question is whether connectivity should be implemented directly for another live system or delegated through an integration substrate such as Agave without surrendering authority/provenance semantics.
 
 Separately, resolve the exact canonical money representation before decimal-valued quotes or payment/UBL/UCP mappings.
 
