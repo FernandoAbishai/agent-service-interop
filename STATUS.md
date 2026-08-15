@@ -1,12 +1,12 @@
 # Project status
 
-_Last updated: 2026-08-14_
+_Last updated: 2026-08-15_
 
 ## Current stage
 
-**Tier 2 — first executable protocol-to-operations adapter**
+**Tier 3 — two executable agent-facing views over one synthetic workflow**
 
-No production interoperability or protocol-conformance claims are made.
+No production interoperability or protocol-certification claims are made.
 
 ## What exists
 
@@ -21,16 +21,18 @@ No production interoperability or protocol-conformance claims are made.
 - [x] Privacy boundary: non-PII intake -> authorized PII at Bind
 - [x] File-backed FSM adapter
 - [x] AIP -> FSM -> canonical round-trip tests
-- [x] Session, agent, consent, expiry and idempotency checks
-- [x] GitHub Actions test workflow
+- [x] Automatic validation against pinned upstream AIP JSON Schemas where normative schemas exist
 - [x] Architecture direction: normalized canonical interoperability state without operational authority
-- [ ] Automatic validation against upstream AIP JSON Schemas
-- [ ] Second independent protocol view
+- [x] A2A v1.0 Agent Card + HTTP+JSON provider-agent surface via official JS SDK
+- [x] AIP-created workflow exposed through A2A without protocol-specific quote/job copies
+- [x] A2A Task identity/state kept separate from FSM Job identity/state
+- [x] GitHub Actions test workflow
 - [ ] Real FSM/API adapter
-- [ ] MCP surface
-- [ ] A2A surface
+- [ ] Second operational-system adapter
+- [ ] Multi-system authority/provenance test
 - [ ] Completion/evidence interoperability tests
 - [ ] Settlement adapter experiment
+- [ ] Agave adapter-substrate experiment
 
 ## Claim status
 
@@ -40,12 +42,14 @@ No production interoperability or protocol-conformance claims are made.
 | Agent-facing service intake is absent | Rejected; AIP is direct prior art |
 | Evidence-conditioned settlement is empty territory | Rejected |
 | A new TriHerm protocol is required | Unsupported |
-| AIP can be projected onto the current synthetic plumbing FSM without replacing it | Supported by reference-adapter tests only |
-| Bind can act as an authorized handoff into the synthetic FSM | Supported by reference-adapter tests; not claimed as universal AIP semantics |
 | Canonical state should be the operational source of truth | Rejected as the current architecture direction |
-| Canonical state can act as a normalized interoperability representation while source systems retain authority | Working architectural hypothesis |
-| One canonical representation can support multiple independent agent-facing views | Still untested; only AIP exists |
+| AIP can be projected onto the current synthetic plumbing FSM without replacing it | Supported by executable tests |
+| Bind can act as an authorized handoff into the synthetic FSM | Supported by executable tests; not universal AIP semantics |
+| AIP artifacts used by the experiment match pinned upstream normative schemas | Supported by automated schema tests for manifest/intake/offer/bind request |
+| One canonical representation can support two independent agent-facing views | Initial support: AIP + A2A over one synthetic workflow |
+| A2A Task state can remain distinct from physical Job state | Supported by executable test: Task completed while Job remains scheduled |
 | Existing real business workflows can remain authoritative while becoming agent-accessible | Still untested against a real FSM/API |
+| One useful normalized core can survive multiple operational systems | Untested |
 | Adapter/interoperability infrastructure is a meaningful deployment wedge | Working hypothesis, not a fact |
 
 ## Authority model
@@ -74,19 +78,32 @@ operational system
 
 Persistence of canonical state remains an implementation question. Persistence alone must not make canonical state authoritative.
 
+A2A does not change this rule. Its current skill is read-only and observes the confirmed FSM state through the canonical projection.
+
 ## Current implementation boundary
 
-The adapter is pinned to **AIP v0.1.0 / 2026-02-27**. It uses a synthetic direct provider and a file-backed FSM. The runtime validates the subset of AIP contracts used by the experiment, but that is not equivalent to automatic conformance validation against the upstream JSON Schemas.
+### AIP
 
-AIP Bind is treated as user-authorized handoff. The existing-system mock performs the business transition from `quote=offered, job=pending` to `quote=accepted, job=scheduled`. The canonical representation is produced from the confirmed FSM state.
+Pinned to **AIP v0.1.0 / 2026-02-27**. The generated/consumed manifest, intake request, offer response, and bind request are checked against vendored upstream JSON Schemas from that snapshot. The adapter-local bind response remains outside normative AIP schema coverage.
+
+### A2A
+
+Uses **A2A Protocol v1.0** through official `@a2a-js/sdk@1.0.1`, with one HTTP+JSON interface and one read-only `inspect_service_workflow` skill.
+
+The A2A surface references the existing canonical workflow, requirement, quote, AIP offer, and operational job IDs. A2A Task/Context IDs remain protocol-local and are not used as business-system identifiers.
+
+`TASK_STATE_COMPLETED` means the read-only provider-agent interaction completed. It is not used to represent physical job completion, fulfillment acceptance, or settlement.
 
 ## Next gate
 
-Before selecting a second protocol surface, harden this first adapter enough that its evidence is trustworthy:
+The protocol-count question is no longer the highest-value uncertainty. The next evidence should test the **deployment/adapter wedge** against real or materially independent operational systems.
 
-1. validate generated manifest/intake/offer/bind fixtures against the pinned upstream AIP schemas where normative schemas exist;
-2. record what is protocol-native versus adapter-local;
-3. use cross-system research to test which workflow concepts are truly normalizable versus provider-specific;
-4. then evaluate candidates for the second independent view without preselecting UCP.
+Candidate gates:
+
+1. evaluate Agave as an adapter substrate versus direct FSM adapters;
+2. add a second operational-system adapter or realistic independent mock that maps the same canonical concepts;
+3. define explicit authority/provenance behavior per field/transition only when the second system forces it;
+4. resolve the exact canonical money representation before decimal-valued quotes or payment/UBL/UCP mappings;
+5. avoid expanding the canonical schema unless implementation demonstrates a concrete semantic need.
 
 No UCP extension or `com.triherm.*` namespace should be introduced until a concrete interoperability need survives implementation.

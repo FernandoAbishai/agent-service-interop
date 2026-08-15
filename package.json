@@ -8,8 +8,13 @@
   },
   "scripts": {
     "start": "node --experimental-strip-types src/server.ts",
+    "start:a2a": "node --experimental-strip-types src/a2a-server.ts",
     "test": "node --experimental-strip-types --test tests/*.test.ts",
     "check": "npm test"
+  },
+  "dependencies": {
+    "@a2a-js/sdk": "1.0.1",
+    "express": "5.1.0"
   },
   "devDependencies": {
     "ajv": "8.17.1",
