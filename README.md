@@ -10,7 +10,7 @@ This repository starts with a residential plumbing workflow and treats existing 
 
 ## What this repository is testing
 
-The experiment asks whether one canonical operational model can sit between:
+The experiment asks whether one normalized canonical interoperability representation can sit between:
 
 - an existing business workflow;
 - Agent Intake Protocol (AIP) for discovery/intake/offer/bind;
@@ -19,22 +19,26 @@ The experiment asks whether one canonical operational model can sit between:
 - later MCP and Agent2Agent surfaces;
 - later settlement/verification adapters.
 
-The initial scope is deliberately narrow: **one plumbing workflow, one canonical model, AIP first, no workflow replacement**.
+The initial scope is deliberately narrow: **one plumbing workflow, one normalized representation, AIP first, no workflow replacement**.
 
 ```text
 Agent / buyer
     |
-    +--> AIP ------------------+
-    |                          |
-    +--> second view (TBD) ----+--> canonical operational model
-                                      |
-                                      v
-                              existing business workflow
-                                      |
-                         quote -> job -> completion
-                                      |
-                                      v
-                            normalized status/evidence
+    v
+AIP surface
+    |
+    v
+adapter / command boundary
+    |
+    v
+existing business workflow  <-- operational authority
+    |
+    | confirmed outcome
+    v
+normalized canonical representation
+    |
+    +--> AIP projection
+    +--> second independent view (TBD)
 ```
 
 ## What this repository is not
@@ -46,6 +50,18 @@ Agent / buyer
 - Not a production payment or escrow system.
 
 Experimental schemas and adapters in this repository describe **translation boundaries** for falsifiable experiments. They are not standards proposals.
+
+## Architecture decision
+
+The current architectural direction is:
+
+> **The canonical model is a normalized interoperability representation of economic workflow state. It is not, by default, the authoritative operational system.**
+
+Writes are routed as intents/commands through the adapter responsible for the authoritative system. The canonical representation is updated from the confirmed outcome rather than being mutated first and expecting the provider system to catch up later.
+
+This preserves a path from a simple derived projection toward multi-system interoperability without turning this project into another FSM/ERP. It does **not** imply that a canonical database, event bus, workflow engine, conflict-resolution layer, or universal service schema is required.
+
+See [`docs/architecture.md`](docs/architecture.md) for the authority model, invariants, open questions, and falsification conditions.
 
 ## Current implementation: AIP -> file-backed FSM
 
@@ -60,6 +76,8 @@ Endpoints:
 The intake is deliberately privacy-minimized: postal code and non-identifying service constraints are accepted before binding. Full name, phone, and street address are requested only at Bind.
 
 For this experiment, **Bind is an authorized handoff to the provider's operational workflow**. It is not represented as payment, job completion, or a universal booking primitive. The file-backed FSM remains authoritative for quote acceptance and job scheduling.
+
+The confirmed FSM result is then projected into the normalized canonical representation. AIP does not directly mutate canonical quote/job state.
 
 The bind response is adapter-local because AIP v0.1.0 defines a bind-request schema but does not define a normative bind-response schema.
 
@@ -85,7 +103,7 @@ By default runtime state is written under `.runtime/`. This adapter is a researc
 - quote transition `offered -> accepted`;
 - job transition `pending -> scheduled` in the existing-system mock;
 - idempotent repeated intake for the same session;
-- projection back into the experimental canonical workflow.
+- projection of confirmed FSM state back into the experimental canonical representation.
 
 These tests are **not a claim of full AIP conformance**. Automatic validation against the upstream AIP JSON Schemas remains a separate gate.
 
@@ -96,6 +114,7 @@ See:
 - [`research/prior-art.md`](research/prior-art.md)
 - [`crosswalk/protocol-capabilities.md`](crosswalk/protocol-capabilities.md)
 - [`docs/experiment.md`](docs/experiment.md)
+- [`docs/architecture.md`](docs/architecture.md)
 - [`schemas/service-workflow.schema.json`](schemas/service-workflow.schema.json)
 - [`fixtures/plumbing/workflow.example.json`](fixtures/plumbing/workflow.example.json)
 - [`fixtures/aip/intake.request.json`](fixtures/aip/intake.request.json)
@@ -112,19 +131,20 @@ These are version-sensitive and must be rechecked before implementation changes:
 
 ## Pass condition
 
-The broader experiment passes only if one plumbing workflow can be represented once, surfaced through AIP plus one independently justified second surface, and round-tripped back into the existing operational workflow without requiring the business to replace that workflow.
+The broader experiment passes only if one plumbing workflow can be normalized without losing decision-critical semantics, surfaced through AIP plus one independently justified second surface, and round-tripped back into the authoritative operational workflow without requiring the business to replace that workflow.
 
 The AIP adapter alone is therefore evidence for one translation boundary, not proof of the full interoperability thesis.
 
 ## Failure is useful
 
-The thesis should be revised if any of these occur:
+The thesis should be revised or narrowed if any of these occur:
 
 - existing protocols already provide the needed deployment integration cleanly;
 - canonical normalization loses decision-critical business semantics;
-- adapter burden is comparable to replacing the workflow;
-- independent agent surfaces cannot consume the same underlying state without protocol-specific forks;
-- real business systems do not expose enough operational state to support the translation.
+- most useful state proves system-specific and resists a stable normalized core;
+- adapter or reconciliation burden is comparable to replacing the workflow;
+- authoritative business systems do not expose enough operational state to support safe translation;
+- independent agent surfaces require incompatible internal models for the same business state.
 
 ## Status
 
