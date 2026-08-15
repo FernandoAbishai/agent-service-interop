@@ -56,12 +56,6 @@ function inputReference(message: Message): { workflowId?: string; sessionId?: st
   for (const part of message.parts) {
     const content = part.content;
     if (!content) continue;
-    if (content.$case === 'data') {
-      const value = content.value as Record<string, unknown>;
-      const workflowId = typeof value.workflow_id === 'string' ? value.workflow_id : undefined;
-      const sessionId = typeof value.session_id === 'string' ? value.session_id : undefined;
-      if (workflowId || sessionId) return { workflowId, sessionId };
-    }
     if (content.$case === 'text') {
       const text = content.value.trim();
       if (text.startsWith('wf-')) return { workflowId: text };
@@ -171,9 +165,9 @@ export class PlumbingWorkflowAgentExecutor implements AgentExecutor {
       name: 'service-workflow-observation',
       description: 'Read-only observation of the authoritative plumbing workflow, projected through the canonical interoperability model.',
       parts: [{
-        content: { $case: 'data', value: payload },
+        content: { $case: 'text', value: JSON.stringify(payload) },
         metadata: undefined,
-        filename: '',
+        filename: 'service-workflow-observation.json',
         mediaType: 'application/json'
       }],
       metadata: {
