@@ -1,0 +1,64 @@
+{
+  "observed_at": "2026-08-15T17:45:00.000Z",
+  "jobs": [
+    {
+      "id": "st-job-1001",
+      "jobStatus": "Scheduled",
+      "completedOn": null,
+      "appointmentCount": 2,
+      "firstAppointmentId": "st-appt-2001",
+      "lastAppointmentId": "st-appt-2002"
+    },
+    {
+      "id": "st-job-1002",
+      "jobStatus": "Completed",
+      "completedOn": "2026-08-14T22:15:00.000Z",
+      "appointmentCount": 1,
+      "firstAppointmentId": "st-appt-2003",
+      "lastAppointmentId": "st-appt-2003"
+    }
+  ],
+  "appointments": [
+    {
+      "id": "st-appt-2001",
+      "jobId": "st-job-1001",
+      "status": "Scheduled",
+      "start": "2026-08-18T16:00:00.000Z",
+      "end": "2026-08-18T18:00:00.000Z",
+      "arrivalWindowStart": "2026-08-18T15:30:00.000Z",
+      "arrivalWindowEnd": "2026-08-18T16:30:00.000Z"
+    },
+    {
+      "id": "st-appt-2002",
+      "jobId": "st-job-1001",
+      "status": "Scheduled",
+      "start": "2026-08-20T17:00:00.000Z",
+      "end": "2026-08-20T19:30:00.000Z",
+      "arrivalWindowStart": "2026-08-20T16:30:00.000Z",
+      "arrivalWindowEnd": "2026-08-20T17:30:00.000Z"
+    },
+    {
+      "id": "st-appt-2003",
+      "jobId": "st-job-1002",
+      "status": "Done",
+      "start": "2026-08-14T20:00:00.000Z",
+      "end": "2026-08-14T22:00:00.000Z",
+      "arrivalWindowStart": "2026-08-14T19:30:00.000Z",
+      "arrivalWindowEnd": "2026-08-14T20:30:00.000Z"
+    }
+  ],
+  "estimates": [
+    {
+      "id": "st-est-3001",
+      "jobId": "st-job-1001",
+      "status": "Sold",
+      "soldOn": "2026-08-15T16:00:00.000Z"
+    },
+    {
+      "id": "st-est-3002",
+      "jobId": null,
+      "status": "Sold",
+      "soldOn": "2026-08-15T16:30:00.000Z"
+    }
+  ]
+}
