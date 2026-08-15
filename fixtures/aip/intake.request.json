@@ -1,0 +1,20 @@
+{
+  "aip_version": "0.1.0",
+  "agent": {
+    "id": "fixture-agent-001",
+    "platform": "custom",
+    "name": "Fixture Buyer Agent",
+    "consent_scope": ["intake", "offer"]
+  },
+  "intake_data": {
+    "postal_code": "92101",
+    "service_need": "leak_diagnosis",
+    "urgency": "this_week",
+    "availability_window": "weekday_after_15_00"
+  },
+  "session_id": "37a606b6-86f3-4b6c-8e12-a4db917802ba",
+  "metadata": {
+    "locale": "en-US",
+    "timezone": "America/Tijuana"
+  }
+}
