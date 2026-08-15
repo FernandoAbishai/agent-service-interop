@@ -10,7 +10,7 @@ This repository starts with a residential plumbing workflow and treats existing 
 
 ## What this repository is testing
 
-The first experiment asks whether one canonical operational model can sit between:
+The experiment asks whether one canonical operational model can sit between:
 
 - an existing business workflow;
 - Agent Intake Protocol (AIP) for discovery/intake/offer/bind;
@@ -45,17 +45,51 @@ Agent / buyer
 - Not a claim that quoting, verification, fulfillment, or evidence primitives are novel.
 - Not a production payment or escrow system.
 
-Experimental schemas in this repository describe **translation boundaries** for a falsifiable implementation. They are not standards proposals.
+Experimental schemas and adapters in this repository describe **translation boundaries** for falsifiable experiments. They are not standards proposals.
 
-## Tier 1: evidence backbone
+## Current implementation: AIP -> file-backed FSM
 
-The first milestone is research-first rather than code-first:
+The first executable adapter is pinned to **AIP v0.1.0 / specification snapshot 2026-02-27**. It models a direct plumbing provider rather than a marketplace.
 
-1. document the prior art and current protocol boundaries;
-2. define a crosswalk from protocol concepts to one canonical plumbing workflow;
-3. define the smallest canonical operational model needed for the experiment;
-4. publish realistic fixtures and explicit falsification criteria;
-5. only then implement adapters.
+Endpoints:
+
+- `GET /.well-known/agent-intake.json`
+- `POST /api/aip/residential-plumbing-quote`
+- `POST /api/aip/bind`
+
+The intake is deliberately privacy-minimized: postal code and non-identifying service constraints are accepted before binding. Full name, phone, and street address are requested only at Bind.
+
+For this experiment, **Bind is an authorized handoff to the provider's operational workflow**. It is not represented as payment, job completion, or a universal booking primitive. The file-backed FSM remains authoritative for quote acceptance and job scheduling.
+
+The bind response is adapter-local because AIP v0.1.0 defines a bind-request schema but does not define a normative bind-response schema.
+
+### Run locally
+
+Requires Node.js 22.16+; CI runs Node 24.
+
+```bash
+npm test
+npm start
+```
+
+By default runtime state is written under `.runtime/`. This adapter is a research fixture, not a production service.
+
+### What the tests currently demonstrate
+
+- direct-provider AIP manifest generation;
+- UUID/session and consent checks;
+- privacy-minimized intake;
+- offer creation and expiry;
+- session/agent correlation;
+- Bind-level PII handoff;
+- quote transition `offered -> accepted`;
+- job transition `pending -> scheduled` in the existing-system mock;
+- idempotent repeated intake for the same session;
+- projection back into the experimental canonical workflow.
+
+These tests are **not a claim of full AIP conformance**. Automatic validation against the upstream AIP JSON Schemas remains a separate gate.
+
+## Evidence backbone
 
 See:
 
@@ -64,10 +98,11 @@ See:
 - [`docs/experiment.md`](docs/experiment.md)
 - [`schemas/service-workflow.schema.json`](schemas/service-workflow.schema.json)
 - [`fixtures/plumbing/workflow.example.json`](fixtures/plumbing/workflow.example.json)
+- [`fixtures/aip/intake.request.json`](fixtures/aip/intake.request.json)
 
 ## Current protocol assumptions
 
-These are version-sensitive and must be rechecked before implementation:
+These are version-sensitive and must be rechecked before implementation changes:
 
 - **AIP v0.1.0** exposes `/.well-known/agent-intake.json` and a Discover -> Submit -> Offer -> Review -> Bind lifecycle.
 - **UCP** uses `/.well-known/ucp` to advertise UCP services/capabilities/payment handlers. In UCP, a *Service* is an API surface/vertical concept; it must not be confused with a plumber's commercial service offering.
@@ -77,7 +112,9 @@ These are version-sensitive and must be rechecked before implementation:
 
 ## Pass condition
 
-The first experiment passes only if one plumbing workflow can be represented once, surfaced through AIP plus one independently justified second surface, and round-tripped back into the existing operational workflow without requiring the business to replace that workflow.
+The broader experiment passes only if one plumbing workflow can be represented once, surfaced through AIP plus one independently justified second surface, and round-tripped back into the existing operational workflow without requiring the business to replace that workflow.
+
+The AIP adapter alone is therefore evidence for one translation boundary, not proof of the full interoperability thesis.
 
 ## Failure is useful
 
@@ -91,7 +128,7 @@ The thesis should be revised if any of these occur:
 
 ## Status
 
-**Experimental / research.** No protocol standing, no production guarantees, no claim of interoperability beyond checked fixtures and future test runs.
+**Experimental / research.** No protocol standing, no production guarantees, and no interoperability claim beyond checked fixtures and test runs.
 
 ## License
 
