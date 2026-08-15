@@ -30,9 +30,11 @@ No production interoperability or protocol-certification claims are made.
 - [x] One Job -> many Appointment identity/schedule falsification test
 - [x] Sold Estimate without Job relationship falsification test
 - [x] Native Job completion observation without payment inference
+- [x] Generic Occurrence observation vocabulary projected from ServiceTitan Appointments
+- [x] Relationship gate documented without canonical schema migration
 - [x] GitHub Actions test workflow
+- [ ] Independent second-source Occurrence mapping (for example Jobber Visit)
 - [ ] Real ServiceTitan/API adapter
-- [ ] Canonical repair decision after second-system evidence
 - [ ] Multi-system authority/provenance test
 - [ ] Completion/evidence interoperability tests
 - [ ] Settlement adapter experiment
@@ -55,6 +57,9 @@ No production interoperability or protocol-certification claims are made.
 | A single `job.scheduled_for` can faithfully represent ServiceTitan-shaped scheduling | Falsified by fixture: one Job has multiple Appointments with independent windows |
 | Every sold Estimate must already have a Job relationship | Falsified by fixture |
 | Provider completion must be inferred from payment/invoice state | Rejected for ServiceTitan-shaped observation; native Job status/completed timestamp are preserved |
+| A distinct work-occurrence observation is justified | Supported for ServiceTitan-shaped evidence; cross-system portability still requires an independent executable mapping |
+| A universal normalized occurrence lifecycle enum is justified | Not yet supported; source-native status remains verbatim |
+| `accepted_as`, `offered_via`, and `converted_from` are stable canonical relationships | Not yet supported as a package; documented as candidates/deferred semantics only |
 | One useful normalized core can survive multiple operational systems | Under active falsification; current canonical schema is intentionally unchanged |
 | Existing real business workflows can remain authoritative while becoming agent-accessible | Still untested against live credentials/API |
 | Adapter/interoperability infrastructure is a meaningful deployment wedge | Working hypothesis, not a fact |
@@ -105,19 +110,31 @@ The current second-system work is a fixture-backed observation boundary, not a l
 - native completion basis from Job state;
 - observation timestamps and source-system provenance.
 
-No generic operational command contract, raw payload store, polling service, event bus, Agave runtime integration, or canonical schema expansion is introduced in this stage.
+### Occurrence architecture gate
+
+PR #6 treats a separately identified scheduled work unit as an **Occurrence observation candidate**, not a new authoritative workflow entity and not a schema migration.
+
+The current executable projection preserves:
+
+- source system;
+- source object type and ID;
+- source-native status;
+- observation timestamp;
+- explicit parent reference;
+- independent schedule/arrival windows.
+
+No universal `occurrence_state`, `work_state`, `offer_state`, `source_revision`, graph store, or generic relationship engine is introduced. Provider completion remains separate from customer acceptance, and completion granularity remains under falsification rather than being forced to occurrence scope.
+
+See [`docs/relationship-gate.md`](docs/relationship-gate.md).
 
 ## Next gate
 
-The next decision is no longer whether to add another protocol. It is whether the second-system evidence requires the canonical representation to change at all, and if so, how little.
+The highest-value next evidence is an **independent second-source occurrence mapping**, rather than another protocol or a schema migration.
 
-Required review after this stage:
+A Jobber-shaped Visit fixture is a strong candidate because it can test whether the current `OccurrenceObservation` fields survive a different operational vocabulary and allow nullable/unscheduled windows without adding vendor-specific core fields.
 
-1. classify `job.scheduled_for` as insufficient, optional shorthand, or removable;
-2. decide whether Appointment belongs in the normalized core, as references, or as a system-specific extension;
-3. model Quote/Estimate-to-Job relationships without forcing a single lifecycle ordering;
-4. preserve provider completion claim separately from customer acceptance;
-5. only then evaluate a live ServiceTitan adapter and Agave as an optional connectivity substrate;
-6. resolve the exact canonical money representation before decimal-valued quotes or payment/UBL/UCP mappings.
+Only after that result should the project decide whether Occurrence belongs in the canonical schema itself or remains an observation-layer interoperability concept.
+
+Separately, resolve the exact canonical money representation before decimal-valued quotes or payment/UBL/UCP mappings.
 
 No UCP extension or `com.triherm.*` namespace should be introduced until a concrete interoperability need survives implementation.
