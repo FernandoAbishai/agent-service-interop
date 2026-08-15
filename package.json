@@ -10,6 +10,7 @@
     "start": "node --experimental-strip-types src/server.ts",
     "start:a2a": "node --experimental-strip-types src/a2a-server.ts",
     "test": "node --experimental-strip-types --test tests/*.test.ts",
+    "test:jobber-live": "JOBBER_LIVE=1 node --experimental-strip-types --test tests/jobber-live.test.ts",
     "check": "npm test"
   },
   "dependencies": {
