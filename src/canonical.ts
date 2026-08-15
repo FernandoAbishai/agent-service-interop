@@ -1,5 +1,12 @@
 import type { FsmSession } from './types.ts';
 
+/**
+ * Project authoritative operational-system state into the experiment's
+ * normalized interoperability representation.
+ *
+ * This function does not make the canonical object authoritative. The FSM
+ * transition has already happened before this projection is produced.
+ */
 export function toCanonicalWorkflow(session: FsmSession) {
   return {
     schema_version: '0.1.0-experimental',
