@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agent-intake-protocol.github.io/agent-intake-protocol/spec/2026-02-27/offer-response.schema.json",
+  "title": "AIP Offer Response",
+  "description": "Schema for the soft-contract offer returned by a business in response to an intake submission.",
+  "type": "object",
+  "required": ["aip_version", "session_id", "status"],
+  "properties": {
+    "aip_version": {"type": "string", "description": "The version of the AIP protocol this response conforms to.", "pattern": "^\\d+\\.\\d+\\.\\d+$"},
+    "session_id": {"type": "string", "description": "The session ID from the intake request, echoed back for correlation.", "format": "uuid"},
+    "status": {"type": "string", "description": "The status of the response.", "enum": ["offer", "declined", "error", "pending"]},
+    "offer": {
+      "type": "object",
+      "description": "The soft-contract offer. Present when status is 'offer'.",
+      "required": ["id", "summary"],
+      "properties": {
+        "id": {"type": "string", "description": "Unique identifier for this offer.", "minLength": 1},
+        "summary": {"type": "string", "description": "Human-readable summary of the offer for the agent to present to the user."},
+        "details": {"type": "object", "description": "Structured offer details. Schema varies by provider and intake type.", "additionalProperties": true},
+        "expires": {"type": "string", "description": "ISO 8601 timestamp when this offer expires.", "format": "date-time"},
+        "bind_endpoint": {"type": "string", "description": "URL to POST a bind request to if the user accepts. Required when binding is available.", "format": "uri"},
+        "bind_requires": {"type": "array", "description": "List of fields required in the bind_data to complete binding.", "items": {"type": "string"}, "examples": [["email", "full_name"], ["email"], ["email", "phone", "full_name"]]},
+        "terms_url": {"type": "string", "description": "URL to terms and conditions that apply to this offer.", "format": "uri"}
+      },
+      "additionalProperties": false
+    },
+    "decline_reason": {"type": "string", "description": "Reason for declining the intake. Present when status is 'declined'."},
+    "error": {
+      "type": "object",
+      "description": "Error information. Present when status is 'error'.",
+      "required": ["code", "message"],
+      "properties": {
+        "code": {"type": "string", "description": "Machine-readable error code.", "examples": ["INVALID_INPUT", "RATE_LIMITED", "SERVICE_UNAVAILABLE", "SCHEMA_MISMATCH"]},
+        "message": {"type": "string", "description": "Human-readable error message."}
+      },
+      "additionalProperties": false
+    },
+    "metadata": {
+      "type": "object",
+      "description": "Optional response metadata.",
+      "properties": {
+        "processing_time_ms": {"type": "integer", "description": "Time taken to process the intake in milliseconds."},
+        "provider_ref": {"type": "string", "description": "Internal reference ID from the provider's system."}
+      },
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": false,
+  "if": {"properties": {"status": {"const": "offer"}}},
+  "then": {"required": ["offer"]}
+}
