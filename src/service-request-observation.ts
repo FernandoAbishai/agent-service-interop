@@ -1,11 +1,15 @@
 import type { AipIntakeRequest } from './types.ts';
 
 /**
- * TH-INTEROP-16 candidate only. Observation-layer vocabulary for testing
- * whether a useful shared Requirement facet exists. It is not a canonical
- * schema object and not a public protocol type.
+ * TH-INTEROP-16 earned observation-layer facet.
+ *
+ * This is intentionally narrower than a universal Requirement object. It
+ * captures only service-request semantics that survived the AIP/UBL
+ * falsification experiment without inventing lifecycle, timing, identity, or
+ * procurement-document equivalence. It is not a canonical schema object and
+ * not a public protocol type.
  */
-export type RequirementObservation = {
+export type ServiceRequestObservation = {
   source_system: 'aip' | 'ubl';
   source_object_type: 'intake' | 'request_for_quotation_line';
   source_id: string;
@@ -36,10 +40,10 @@ export type UblRequestForQuotationLineObservation = {
   note?: string | null;
 };
 
-export function aipIntakeToRequirementObservation(
+export function aipIntakeToServiceRequestObservation(
   request: AipIntakeRequest,
   observedAt: string
-): RequirementObservation {
+): ServiceRequestObservation {
   return {
     source_system: 'aip',
     source_object_type: 'intake',
@@ -50,16 +54,16 @@ export function aipIntakeToRequirementObservation(
       postal_code: request.intake_data.postal_code,
       country: null
     },
-    // These source semantics matter, but TH-INTEROP-16 has not established
+    // These source semantics matter, but TH-INTEROP-16 did not establish
     // equivalence with UBL delivery-period semantics.
     unmapped_source_fields: ['urgency', 'availability_window']
   };
 }
 
-export function ublRfqLineToRequirementObservation(
+export function ublRfqLineToServiceRequestObservation(
   line: UblRequestForQuotationLineObservation,
   observedAt: string
-): RequirementObservation {
+): ServiceRequestObservation {
   const unmapped = ['rfq_document_context'];
   if (line.requested_delivery_period) unmapped.push('requested_delivery_period');
   if (line.note) unmapped.push('note');
