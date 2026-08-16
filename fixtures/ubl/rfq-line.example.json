@@ -1,0 +1,12 @@
+{
+  "rfq_id": "RFQ-TRIHERM-001",
+  "line_id": "1",
+  "item_description": "leak_diagnosis",
+  "delivery_postal_code": "92101",
+  "delivery_country": "US",
+  "requested_delivery_period": {
+    "start_date": "2026-08-17",
+    "end_date": "2026-08-21"
+  },
+  "note": "Synthetic UBL-shaped semantic fixture for TH-INTEROP-16. Procurement document context remains source-specific."
+}
