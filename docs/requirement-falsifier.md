@@ -1,6 +1,6 @@
 # TH-INTEROP-16 — Requirement translation falsifier
 
-_Status: implementation experiment stacked on TH-INTEROP-15. Result: **NARROW**. No canonical-schema migration._
+_Status: completed implementation experiment. Result: **NARROW**. No canonical-schema migration._
 
 ## Question
 
@@ -14,7 +14,7 @@ This experiment does **not** implement general UBL XML ingestion. `UblRequestFor
 
 ## Candidate shared facet
 
-TH-INTEROP-16 intentionally starts with only:
+TH-INTEROP-16 tested only:
 
 - source system/object/id;
 - observation time;
@@ -22,7 +22,7 @@ TH-INTEROP-16 intentionally starts with only:
 - minimal service/delivery location (`postal_code`, `country`) where available;
 - explicit list of source fields that were not normalized.
 
-It deliberately excludes a universal request lifecycle, customer identity, procurement document authority, money, commitment, quote state, and timing model.
+It deliberately excluded a universal request lifecycle, customer identity, procurement document authority, money, commitment, quote state, and timing model.
 
 ## Primary falsifier
 
@@ -35,27 +35,11 @@ The UBL-shaped RFQ line expresses a requested delivery period using explicit dat
 
 Those may influence the same human scheduling decision, but they are **not asserted to be semantically equivalent**. Therefore the shared observation has no `normalized_timing` field. The source semantics remain explicitly unmapped.
 
-If later evidence proves a common timing representation, it must be introduced by a separate gate.
-
 ## UBL document context boundary
 
-A UBL RequestForQuotation is a procurement document, not merely a generic service-intake payload. Document-level concepts such as issue metadata and supplier/customer parties remain outside the shared requirement facet unless a future interoperability task proves they are required.
+A UBL RequestForQuotation is a procurement document, not merely a generic service-intake payload. Document-level concepts such as issue metadata and supplier/customer parties remain outside the shared request facet unless a future interoperability task proves they are required.
 
-The test therefore marks `rfq_document_context` as unmapped rather than copying document semantics into a supposedly universal Requirement object.
-
-## PASS / NARROW / FAIL
-
-### PASS
-
-A richer shared Requirement model survives and is useful for correlation/translation while source-specific constraints remain auditable.
-
-### NARROW
-
-Only service description + location + provenance survive without inventing equivalence. In that case `Requirement` should be renamed/reduced toward a thin `ServiceRequestObservation`-style facet rather than promoted as a rich canonical entity.
-
-### FAIL
-
-Even service need/location cannot be aligned without source-specific interpretation or vertical mapping. In that case retain protocol/source references and do not normalize Requirement.
+The test marks `rfq_document_context` as unmapped rather than copying document semantics into a supposedly universal object.
 
 ## Observed result — NARROW
 
@@ -82,6 +66,22 @@ The important result is not that AIP and UBL can be made to look identical. They
 
 Therefore TH-INTEROP-16 does **not** support promoting the current rich `requirement` member in `service-workflow.schema.json` as a universal TriHerm primitive.
 
+## Accepted architecture consequence
+
+TH-INTEROP-15 accepts the narrowing result.
+
+The observation-layer type is now named:
+
+```text
+ServiceRequestObservation
+```
+
+rather than `RequirementObservation`.
+
+That rename is semantic, not cosmetic: it makes explicit that the experiment earned only a thin observation of a service request, not a universal Requirement entity or lifecycle.
+
+`ServiceRequestObservation` remains outside `schemas/service-workflow.schema.json`. This result does not authorize canonical promotion, lifecycle expansion, timing normalization, customer identity modeling, or procurement-document absorption.
+
 ## Exclusions
 
 - no change to `schemas/service-workflow.schema.json`;
@@ -93,11 +93,6 @@ Therefore TH-INTEROP-16 does **not** support promoting the current rich `require
 - no quote or money work;
 - no Jobber/ServiceTitan/Agave work.
 
-## Architectural consequence
+## Next gate
 
-TH-INTEROP-15 should narrow `Requirement` from `NORMALIZED_CANDIDATE` toward a thinner request-observation facet. A likely future name is `ServiceRequestObservation`, but this PR deliberately does not perform that rename or promote it into the canonical schema.
-
-The next code-bearing gate should not enlarge Requirement. It should either:
-
-1. test another independent request representation to see whether even the thin facet survives; or
-2. move to the next uncertain primitive only after explicitly accepting this narrowing result.
+Do not enlarge `ServiceRequestObservation` by default. The next implementation should attack a different uncertain boundary, with Quote blocked until the exact-money representation decision is resolved.
