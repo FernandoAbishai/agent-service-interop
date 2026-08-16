@@ -1,0 +1,73 @@
+{
+  "data": {
+    "job": {
+      "id": "Z2lkOi8vSm9iYmVyL0pvYi85MDAwMDE=",
+      "jobStatus": "ACTIVE",
+      "visits": {
+        "nodes": [
+          {
+            "id": "Z2lkOi8vSm9iYmVyL1Zpc2l0LzkxMDAwMQ==",
+            "visitStatus": "UPCOMING",
+            "startAt": "2026-08-20T16:00:00Z",
+            "endAt": "2026-08-20T17:30:00Z",
+            "arrivalWindow": {
+              "startAt": "2026-08-20T15:30:00Z",
+              "endAt": "2026-08-20T16:30:00Z"
+            },
+            "isComplete": false,
+            "completedAt": null,
+            "completedBy": null,
+            "clientConfirmed": true,
+            "job": {
+              "id": "Z2lkOi8vSm9iYmVyL0pvYi85MDAwMDE=",
+              "jobStatus": "ACTIVE"
+            }
+          },
+          {
+            "id": "Z2lkOi8vSm9iYmVyL1Zpc2l0LzkxMDAwMg==",
+            "visitStatus": "UNSCHEDULED",
+            "startAt": null,
+            "endAt": null,
+            "arrivalWindow": null,
+            "isComplete": false,
+            "completedAt": null,
+            "completedBy": null,
+            "clientConfirmed": false,
+            "job": {
+              "id": "Z2lkOi8vSm9iYmVyL0pvYi85MDAwMDE=",
+              "jobStatus": "ACTIVE"
+            }
+          },
+          {
+            "id": "Z2lkOi8vSm9iYmVyL1Zpc2l0LzkxMDAwMw==",
+            "visitStatus": "COMPLETED",
+            "startAt": "2026-08-10T18:00:00Z",
+            "endAt": "2026-08-10T19:00:00Z",
+            "arrivalWindow": {
+              "startAt": "2026-08-10T17:30:00Z",
+              "endAt": "2026-08-10T18:30:00Z"
+            },
+            "isComplete": true,
+            "completedAt": "2026-08-10T18:52:00Z",
+            "completedBy": "Synthetic Technician",
+            "clientConfirmed": true,
+            "job": {
+              "id": "Z2lkOi8vSm9iYmVyL0pvYi85MDAwMDE=",
+              "jobStatus": "ACTIVE"
+            }
+          }
+        ],
+        "pageInfo": {
+          "hasNextPage": false,
+          "endCursor": null
+        },
+        "totalCount": 3
+      }
+    }
+  },
+  "extensions": {
+    "versioning": {
+      "version": "2025-04-16"
+    }
+  }
+}
