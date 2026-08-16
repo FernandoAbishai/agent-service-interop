@@ -1,8 +1,8 @@
 # TH-INTEROP-15 — Minimal Economic Primitive Set
 
-_Status: architecture falsification gate. This document does not define a public TriHerm protocol and does not promote new fields into the canonical schema._
+_Status: architecture falsification gate. TH-INTEROP-16 narrowing result accepted. This document does not define a public TriHerm protocol and does not promote new fields into the canonical schema._
 
-_Last checked against primary sources: 2026-08-15._
+_Last checked against primary sources: 2026-08-16._
 
 ## Question
 
@@ -27,7 +27,7 @@ If those conditions do not hold, the concept stays outside the minimal core.
 
 ## Classification vocabulary
 
-- `EARNED_OBSERVATION` — already survived meaningful cross-system evidence at the observation layer.
+- `EARNED_OBSERVATION` — survived a meaningful cross-representation/system falsifier at the observation layer.
 - `NORMALIZED_CANDIDATE` — likely useful across representations, but not yet sufficiently proven for canonical promotion.
 - `REFERENCE_ONLY` — preserve stable identifiers, provenance, and authority pointers without owning the underlying semantics.
 - `DEFERRED` — economically meaningful, but current evidence is insufficient to normalize safely.
@@ -40,7 +40,7 @@ If those conditions do not hold, the concept stays outside the minimal core.
 | Candidate | Current classification | Why | Promotion gate |
 |---|---|---|---|
 | Provider / business identity | `REFERENCE_ONLY` | Provider identity and capability discovery already live in business systems and protocol discovery surfaces. TriHerm needs correlation, not a new universal identity authority. | Promote only a minimal identity facet if two independent protocols require the same normalized fields and source references alone are insufficient. |
-| Requirement / service request | `NORMALIZED_CANDIDATE` | AIP already defines structured intake; UBL has mature request/RFQ prior art. TriHerm may need a protocol-neutral request representation for translation, but the current plumbing fixture is not enough to establish a universal requirement model. | Map at least two independent request representations while preserving constraints, location/privacy boundaries, and source authority without vertical forks. |
+| Service request facet | `EARNED_OBSERVATION` | TH-INTEROP-16 mapped an AIP intake and a UBL RFQ line and found a thin common facet: requested service, minimal location, provenance/source identity, plus explicit unmapped source semantics. The broader `Requirement` concept did **not** survive. | Do not enlarge this facet without another falsifier. Canonical promotion, if ever needed, requires an explicit decision separate from this observation-layer result. |
 | Offer / quote | `NORMALIZED_CANDIDATE` | Quote semantics are prior art in AIP and UBL and exist natively in FSM/CRM systems. The interoperability need is translation and provenance, not invention. | Resolve exact money representation first; then prove reversible-enough mapping across at least one protocol representation and one real operational quote/estimate source. |
 | Commitment / order / accepted obligation | `DEFERRED` | AIP Bind is an active-relationship handoff, while UBL Order creates a contractual obligation. These are not safe universal synonyms for booking, accepted estimate, payment, or work authorization. | Observe at least two authoritative commitment transitions and prove a common invariant more precise than `accepted=true`. |
 | Operational Job / Work Order | `REFERENCE_ONLY` | Job/work-order lifecycle belongs to the provider system. A2A/MCP task lifecycle is also not the physical-service lifecycle. TriHerm should preserve source identity and relationships, not replace the FSM. | Only normalize a narrow facet if cross-system coordination cannot be achieved with references plus earned sub-primitives such as Occurrence. |
@@ -69,11 +69,13 @@ The smallest defensible interoperability surface today is closer to:
 ```text
 correlation + provenance/authority
           |
-          +-- experimental Requirement representation
+          +-- earned ServiceRequestObservation
+          +-- earned OccurrenceObservation
           +-- experimental Quote representation
-          +-- earned Occurrence observation
           +-- references to authoritative operational/protocol objects
 ```
+
+The important narrowing from TH-INTEROP-16 is that a rich universal `Requirement` entity is **not** supported. Only a thin service-request observation survived the AIP/UBL falsifier without inventing timing, lifecycle, identity, or procurement-document equivalence.
 
 Everything else remains source-native, protocol-specific, reference-only, or deferred until an interoperability requirement forces normalization.
 
@@ -83,13 +85,38 @@ Everything else remains source-native, protocol-specific, reference-only, or def
 
 In particular:
 
+- required `requirement` does not prove a rich universal Requirement primitive;
 - required `completion` does not prove a universal completion primitive;
 - required `customer_decision` does not prove a universal acceptance/dispute primitive;
 - the normalized `job.status` enum is fixture-specific and should not be expanded or treated as authoritative cross-system lifecycle;
 - numeric quote amounts are not an accepted long-term money representation;
-- the absence of `Occurrence` from that schema does not invalidate the earned observation-layer vocabulary.
+- the absence of `ServiceRequestObservation` and `OccurrenceObservation` from that schema does not invalidate the earned observation-layer vocabularies.
 
-No schema migration is part of TH-INTEROP-15.
+No schema migration is implied by accepting TH-INTEROP-16.
+
+## TH-INTEROP-16 accepted result
+
+TH-INTEROP-16 compared the existing AIP plumbing intake with a UBL RequestForQuotation line projection.
+
+Shared semantics that survived:
+
+- requested service;
+- postal-code-level location where present;
+- source system/object/id;
+- observation time;
+- explicit accounting for source fields that did not normalize.
+
+Semantics that did not earn normalization:
+
+- AIP urgency;
+- AIP availability window;
+- UBL requested delivery period;
+- UBL RFQ document context and note;
+- universal request lifecycle;
+- normalized timing;
+- customer/buyer/seller identity.
+
+The accepted observation-layer name is `ServiceRequestObservation`, not `RequirementObservation`.
 
 ## Existing protocol/standards boundaries checked for this gate
 
@@ -127,21 +154,20 @@ Primary source: https://docs.oasis-open.org/ubl/UBL-2.4.html
 
 See `research/prior-art.md` for ERC-8183, RAILS, TessPay, and VCAP. TH-INTEROP-15 treats these as reasons to avoid inventing a new evidence/verification object without a concrete deployment need.
 
-## Falsification tests for the next implementation
+## Next falsification candidates
 
-The next code-bearing experiment should attack one of the remaining uncertain boundaries, not add another broad schema.
+The Requirement falsifier is complete and its narrowing result is accepted. The next code-bearing experiment should attack a remaining uncertain boundary rather than enlarge `ServiceRequestObservation`.
 
 High-value options:
 
-1. **Requirement translation falsifier** — take one real/official-shaped service request through two independent protocol/system representations and measure what cannot be normalized without semantic loss.
-2. **Quote translation falsifier** — after the exact-money decision, map one authoritative quote/estimate through AIP/UBL or another independent representation and test round-trip/auditability.
-3. **Commitment authority falsifier** — compare two real binding/acceptance transitions and determine whether a common `Commitment` concept exists without conflating quote acceptance, booking, order creation, payment, and work authorization.
-4. **Evidence/verification falsifier** — use a real evidence producer and verifier to determine whether TriHerm needs a shared evidence reference/verification decision surface at all.
+1. **Quote translation falsifier** — only after resolving the exact-money representation gate; map one authoritative quote/estimate through an independent representation and test round-trip/auditability.
+2. **Commitment authority falsifier** — compare two real binding/acceptance transitions and determine whether a common `Commitment` concept exists without conflating quote acceptance, booking, order creation, payment, and work authorization.
+3. **Evidence/verification falsifier** — use a real evidence producer and verifier to determine whether TriHerm needs a shared evidence reference/verification decision surface at all.
 
 Do not select an option because it produces the largest schema. Select the smallest experiment that can invalidate an architectural assumption.
 
 ## Gate outcome
 
-TH-INTEROP-15 should PASS if it reduces the candidate core and makes the next falsifier more precise.
+TH-INTEROP-15 passes as a narrowing gate: it reduced the candidate core, and TH-INTEROP-16 further falsified the broad Requirement concept.
 
-It should FAIL if the result is merely a renamed end-to-end commerce ontology or if it assumes TriHerm must own every stage of the transaction.
+It would be a regression to reinterpret this result as permission to create a renamed end-to-end commerce ontology or to assume TriHerm owns every stage of the transaction.
