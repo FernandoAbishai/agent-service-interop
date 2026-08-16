@@ -1,6 +1,6 @@
 # TH-INTEROP-16 — Requirement translation falsifier
 
-_Status: implementation experiment stacked on TH-INTEROP-15. No canonical-schema migration._
+_Status: implementation experiment stacked on TH-INTEROP-15. Result: **NARROW**. No canonical-schema migration._
 
 ## Question
 
@@ -47,21 +47,40 @@ The test therefore marks `rfq_document_context` as unmapped rather than copying 
 
 ### PASS
 
-A small shared facet survives and is useful for correlation/translation while source-specific constraints remain auditable.
+A richer shared Requirement model survives and is useful for correlation/translation while source-specific constraints remain auditable.
 
 ### NARROW
 
-Only service description + location + provenance survive. In that case `Requirement` should be renamed/reduced toward a thin `ServiceRequestObservation`-style facet rather than promoted as a rich canonical entity.
+Only service description + location + provenance survive without inventing equivalence. In that case `Requirement` should be renamed/reduced toward a thin `ServiceRequestObservation`-style facet rather than promoted as a rich canonical entity.
 
 ### FAIL
 
 Even service need/location cannot be aligned without source-specific interpretation or vertical mapping. In that case retain protocol/source references and do not normalize Requirement.
 
-## Current expected interpretation
+## Observed result — NARROW
 
-The experiment is intentionally biased toward **NARROW**, not toward proving the existing `requirement` object correct.
+The implementation and full CI suite passed with the deliberately narrow mapping.
 
-AIP's privacy-minimized intake, including postal code without street address, also demonstrates why missing data must remain missing. The adapter does not invent `country` when the intake did not provide it.
+What survived across the two representations:
+
+- requested service (`leak_diagnosis` in the controlled fixture);
+- postal-code-level location;
+- source identity/provenance;
+- explicit representation of what did **not** normalize.
+
+What did not earn shared semantics:
+
+- AIP urgency;
+- AIP availability window;
+- UBL requested delivery period;
+- UBL RFQ document context and note;
+- a universal request lifecycle;
+- customer/buyer/seller identity;
+- a normalized timing model.
+
+The important result is not that AIP and UBL can be made to look identical. They cannot without adding assumptions. The useful result is that a thin common service-request facet survives while decision-relevant source semantics remain explicit.
+
+Therefore TH-INTEROP-16 does **not** support promoting the current rich `requirement` member in `service-workflow.schema.json` as a universal TriHerm primitive.
 
 ## Exclusions
 
@@ -74,6 +93,11 @@ AIP's privacy-minimized intake, including postal code without street address, al
 - no quote or money work;
 - no Jobber/ServiceTitan/Agave work.
 
-## Next decision
+## Architectural consequence
 
-If the tests pass as designed, TH-INTEROP-15 should update `Requirement` from a broad normalized candidate toward the smallest facet actually demonstrated here. That decision belongs in the parent architecture gate or a follow-up after this implementation result is reviewed; the implementation itself does not silently promote or rename the primitive.
+TH-INTEROP-15 should narrow `Requirement` from `NORMALIZED_CANDIDATE` toward a thinner request-observation facet. A likely future name is `ServiceRequestObservation`, but this PR deliberately does not perform that rename or promote it into the canonical schema.
+
+The next code-bearing gate should not enlarge Requirement. It should either:
+
+1. test another independent request representation to see whether even the thin facet survives; or
+2. move to the next uncertain primitive only after explicitly accepting this narrowing result.
