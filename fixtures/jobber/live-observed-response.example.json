@@ -1,0 +1,69 @@
+{
+  "data": {
+    "job": {
+      "id": "Z2lkOi8vSm9iYmVyL0pvYi8xNTQxMDkxNDI=",
+      "jobNumber": 1,
+      "title": "TriHerm Occurrence Test",
+      "jobStatus": "upcoming",
+      "visits": {
+        "nodes": [
+          {
+            "id": "Z2lkOi8vSm9iYmVyL1Zpc2l0LzIyOTA3ODM0NjM=",
+            "title": "Visit A Scheduled Incomplete",
+            "visitStatus": "UPCOMING",
+            "startAt": "2026-08-16T09:00:00-07:00",
+            "endAt": "2026-08-16T10:00:00-07:00",
+            "arrivalWindow": null,
+            "isComplete": false,
+            "completedAt": null,
+            "completedBy": null,
+            "clientConfirmed": false
+          },
+          {
+            "id": "Z2lkOi8vSm9iYmVyL1Zpc2l0LzIyOTA3ODM0NjQ=",
+            "title": "Visit B Scheduled Complete",
+            "visitStatus": "COMPLETED",
+            "startAt": "2026-08-17T21:00:00Z",
+            "endAt": "2026-08-17T22:00:00Z",
+            "arrivalWindow": null,
+            "isComplete": true,
+            "completedAt": "2026-08-15T17:08:45-07:00",
+            "completedBy": "Fernando M",
+            "clientConfirmed": false
+          },
+          {
+            "id": "Z2lkOi8vSm9iYmVyL1Zpc2l0LzIyOTA3ODM0NjI=",
+            "title": "Visit C Unscheduled Incomplete",
+            "visitStatus": "UNSCHEDULED",
+            "startAt": null,
+            "endAt": null,
+            "arrivalWindow": null,
+            "isComplete": false,
+            "completedAt": null,
+            "completedBy": null,
+            "clientConfirmed": false
+          }
+        ],
+        "pageInfo": {
+          "hasNextPage": false,
+          "endCursor": "Mw"
+        },
+        "totalCount": 3
+      }
+    }
+  },
+  "extensions": {
+    "cost": {
+      "requestedQueryCost": 311,
+      "actualQueryCost": 41,
+      "throttleStatus": {
+        "maximumAvailable": 10000,
+        "currentlyAvailable": 9959,
+        "restoreRate": 500
+      }
+    },
+    "versioning": {
+      "version": "2025-04-16"
+    }
+  }
+}
