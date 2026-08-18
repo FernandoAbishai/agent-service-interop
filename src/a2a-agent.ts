@@ -4,7 +4,7 @@ import { A2A_PROTOCOL_VERSION, Role, TaskState } from '@a2a-js/sdk';
 import type { AgentExecutor, ExecutionEventBus, RequestContext } from '@a2a-js/sdk/server';
 import { AgentEvent, DefaultRequestHandler, InMemoryTaskStore } from '@a2a-js/sdk/server';
 import { FileFsmStore } from './fsm-store.ts';
-import { toCanonicalWorkflow } from './canonical.ts';
+import { projectWorkflowInspection } from './workflow-inspection.ts';
 
 export const A2A_AGENT_VERSION = '1.0.0';
 
@@ -76,9 +76,9 @@ function inputReference(message: Message): { workflowId?: string; sessionId?: st
   return {};
 }
 
-function sessionIdFromReference(reference: { workflowId?: string; sessionId?: string }): string | undefined {
-  if (reference.sessionId) return reference.sessionId;
-  if (reference.workflowId?.startsWith('wf-')) return reference.workflowId.slice(3);
+function workflowIdFromReference(reference: { workflowId?: string; sessionId?: string }): string | undefined {
+  if (reference.workflowId) return reference.workflowId;
+  if (reference.sessionId) return `wf-${reference.sessionId}`;
   return undefined;
 }
 
@@ -92,9 +92,8 @@ export class PlumbingWorkflowAgentExecutor implements AgentExecutor {
   async execute(context: RequestContext, eventBus: ExecutionEventBus): Promise<void> {
     const taskId = context.taskId;
     const contextId = context.contextId;
-    const reference = inputReference(context.userMessage);
-    const sessionId = sessionIdFromReference(reference);
-    const session = sessionId ? this.store.getBySession(sessionId) : undefined;
+    const workflowId = workflowIdFromReference(inputReference(context.userMessage));
+    const payload = workflowId ? projectWorkflowInspection(this.store, workflowId) : undefined;
 
     const initialTask: Task = context.task ?? {
       id: taskId,
@@ -110,7 +109,7 @@ export class PlumbingWorkflowAgentExecutor implements AgentExecutor {
     };
     eventBus.publish(AgentEvent.task(initialTask));
 
-    if (!session) {
+    if (!payload) {
       eventBus.publish(AgentEvent.statusUpdate({
         taskId,
         contextId,
@@ -138,32 +137,10 @@ export class PlumbingWorkflowAgentExecutor implements AgentExecutor {
       return;
     }
 
-    const canonical = toCanonicalWorkflow(session);
-    const payload = {
-      semantics: {
-        a2a_task_state_meaning: 'provider-agent interaction state, not physical service execution state',
-        operational_authority: canonical.provider.operational_system
-      },
-      references: {
-        canonical_workflow_id: canonical.workflow_id,
-        requirement_id: canonical.requirement.requirement_id,
-        quote_id: canonical.quote.quote_id,
-        aip_offer_id: canonical.quote.representation_refs.aip_offer,
-        operational_job_id: canonical.job.job_id
-      },
-      observed_state: {
-        quote_status: canonical.quote.status,
-        job_status: canonical.job.status,
-        scheduled_for: 'scheduled_for' in canonical.job ? canonical.job.scheduled_for : null,
-        completion_status: canonical.completion.provider_claim.status,
-        customer_decision_status: canonical.customer_decision.status
-      }
-    };
-
     const artifact: Artifact = {
       artifactId: randomUUID(),
       name: 'service-workflow-observation',
-      description: 'Read-only observation of the authoritative plumbing workflow, projected through the canonical interoperability model.',
+      description: 'Read-only observation of the authoritative plumbing workflow, projected through the shared interoperability inspection view.',
       parts: [{
         content: { $case: 'text', value: JSON.stringify(payload) },
         metadata: undefined,
@@ -171,8 +148,8 @@ export class PlumbingWorkflowAgentExecutor implements AgentExecutor {
         mediaType: 'application/json'
       }],
       metadata: {
-        canonical_workflow_id: canonical.workflow_id,
-        operational_job_id: canonical.job.job_id
+        canonical_workflow_id: payload.references.canonical_workflow_id,
+        operational_job_id: payload.references.operational_job_id
       },
       extensions: []
     };

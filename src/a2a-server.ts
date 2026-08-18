@@ -4,10 +4,26 @@ import { agentCardHandler, restHandler, UserBuilder } from '@a2a-js/sdk/server/e
 import { resolve } from 'node:path';
 import { FileFsmStore } from './fsm-store.ts';
 import { createA2ARequestHandler } from './a2a-agent.ts';
+import { projectWorkflowInspection } from './workflow-inspection.ts';
 
 export function createA2AApp(baseUrl: string, store: FileFsmStore): Express {
   const requestHandler = createA2ARequestHandler(baseUrl, store);
   const app = express();
+
+  app.get('/api/interop/workflows/:workflowId/inspection', (req, res) => {
+    const inspection = projectWorkflowInspection(store, req.params.workflowId);
+    if (!inspection) {
+      res.status(404).json({
+        error: {
+          code: 'WORKFLOW_NOT_FOUND',
+          message: 'Workflow not found'
+        }
+      });
+      return;
+    }
+    res.status(200).json(inspection);
+  });
+
   app.use(`/${AGENT_CARD_PATH}`, agentCardHandler({ agentCardProvider: requestHandler }));
   app.use('/a2a', restHandler({ requestHandler, userBuilder: UserBuilder.noAuthentication }));
   return app;
@@ -23,9 +39,10 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   const app = createA2AApp(baseUrl, store);
 
   app.listen(port, host, () => {
-    console.log(`agent-service-interop A2A provider surface listening on ${baseUrl}`);
+    console.log(`agent-service-interop provider surfaces listening on ${baseUrl}`);
     console.log(`agent card: ${baseUrl}/${AGENT_CARD_PATH}`);
-    console.log(`HTTP+JSON binding: ${baseUrl}/a2a`);
+    console.log(`A2A HTTP+JSON binding: ${baseUrl}/a2a`);
+    console.log(`read-only inspection: ${baseUrl}/api/interop/workflows/{workflow_id}/inspection`);
     console.log(`shared file-backed FSM state: ${statePath}`);
   });
 }
