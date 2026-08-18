@@ -1,20 +1,19 @@
 openapi: 3.1.0
 info:
   title: Agent Service Interop Inspection API
-  version: 0.1.0-experimental
+  version: 0.2.0-experimental
   description: >-
-    Read-only HTTP projection over the same underlying service workflow exposed
-    through the repository's A2A inspection skill. This API does not authorize,
-    schedule, complete, settle, or otherwise mutate the real-world service job.
+    Read-only projections over the same underlying service workflow exposed
+    through the repository's A2A inspection skill. These APIs do not authorize,
+    schedule, complete, settle, or otherwise mutate a real-world service job.
 paths:
   /api/interop/workflows/{workflow_id}/inspection:
     get:
       operationId: inspectServiceWorkflow
       summary: Inspect an existing service workflow
       description: >-
-        Returns a read-only interoperability observation for an existing workflow.
-        A successful response describes observed workflow state only; it does not
-        imply physical-service completion, customer acceptance, or payment.
+        Local/research read-only interoperability observation for an existing
+        workflow. This route is not the public x402 stranger-test surface.
       parameters:
         - name: workflow_id
           in: path
@@ -31,6 +30,27 @@ paths:
                 $ref: '#/components/schemas/WorkflowInspection'
         '404':
           description: Workflow not found
+  /api/x402/public/workflow-inspection:
+    get:
+      operationId: inspectPublicSyntheticWorkflow
+      summary: Inspect the configured public synthetic workflow
+      description: >-
+        Paid x402 resource for one server-configured synthetic/public workflow.
+        The caller does not supply a workflow identifier. Payment authorizes only
+        this digital resource invocation; it does not establish identity,
+        delegation, access to private workflows, quote acceptance, service
+        authorization, service payment, fulfillment, or customer acceptance.
+      responses:
+        '200':
+          description: Paid read-only inspection of the configured public synthetic workflow
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkflowInspection'
+        '402':
+          description: x402 payment required
+        '404':
+          description: Configured public synthetic resource is unavailable
 components:
   schemas:
     WorkflowInspection:

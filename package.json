@@ -9,13 +9,18 @@
   "scripts": {
     "start": "node --experimental-strip-types src/server.ts",
     "start:a2a": "node --experimental-strip-types src/a2a-server.ts",
+    "start:x402": "node --experimental-strip-types src/x402-server.ts",
     "test": "node --experimental-strip-types --test tests/*.test.ts",
     "test:jobber-live": "JOBBER_LIVE=1 node --experimental-strip-types --test tests/jobber-live.test.ts",
     "check": "npm test"
   },
   "dependencies": {
     "@a2a-js/sdk": "1.0.1",
-    "express": "5.1.0"
+    "@circle-fin/x402-batching": "3.2.0",
+    "@x402/core": "2.21.0",
+    "@x402/evm": "2.20.0",
+    "express": "5.1.0",
+    "viem": "2.55.11"
   },
   "devDependencies": {
     "ajv": "8.17.1",
