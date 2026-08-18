@@ -12,6 +12,7 @@
     "start:x402": "node --experimental-strip-types src/x402-server.ts",
     "test": "node --experimental-strip-types --test tests/*.test.ts",
     "test:jobber-live": "JOBBER_LIVE=1 node --experimental-strip-types --test tests/jobber-live.test.ts",
+    "test:circle-live": "CIRCLE_GATEWAY_LIVE=1 node --env-file=.env.circle-live --experimental-strip-types --test tests/x402-circle-live.test.ts",
     "check": "npm test"
   },
   "dependencies": {
