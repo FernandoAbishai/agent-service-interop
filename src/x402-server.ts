@@ -6,6 +6,7 @@ import { projectWorkflowInspection } from './workflow-inspection.ts';
 
 export const CIRCLE_GATEWAY_TESTNET_URL = 'https://gateway-api-testnet.circle.com';
 export const DEFAULT_X402_INSPECTION_PRICE = '$0.001';
+export const X402_PUBLIC_INSPECTION_PATH = '/api/x402/public/workflow-inspection';
 
 export type PaidInspectionOptions = {
   publicWorkflowId: string;
@@ -22,7 +23,7 @@ function resourceNotAvailable(res: Parameters<RequestHandler>[1]): void {
   res.status(404).json({
     error: {
       code: 'RESOURCE_NOT_AVAILABLE',
-      message: 'Resource not available on this public inspection surface'
+      message: 'Public inspection resource is not available'
     }
   });
 }
@@ -65,10 +66,10 @@ export function createCircleGatewayPaymentGate(config: CircleGatewayPaymentConfi
 /**
  * Public x402 surface used by TH-INTEROP-19.
  *
- * The public-resource policy executes before payment middleware. Therefore a
- * payment attempt can never turn an arbitrary/private workflow ID into an
- * authorized resource. Non-public and nonexistent IDs intentionally share the
- * same 404 response to avoid exposing whether a workflow exists.
+ * The buyer cannot submit a workflow identifier at all. The resource server is
+ * configured with exactly one explicit synthetic/public workflow. Payment can
+ * therefore authorize only this digital resource invocation; it cannot be used
+ * to probe, select, or authorize access to arbitrary/private workflows.
  */
 export function createPaidInspectionApp(store: FileFsmStore, options: PaidInspectionOptions): Express {
   assertPublicWorkflowId(options.publicWorkflowId);
@@ -80,17 +81,10 @@ export function createPaidInspectionApp(store: FileFsmStore, options: PaidInspec
   });
 
   app.get(
-    '/api/x402/workflows/:workflowId/inspection',
-    (req, res, next) => {
-      if (req.params.workflowId !== options.publicWorkflowId) {
-        resourceNotAvailable(res);
-        return;
-      }
-      next();
-    },
+    X402_PUBLIC_INSPECTION_PATH,
     options.paymentGate,
-    (req, res) => {
-      const inspection = projectWorkflowInspection(store, req.params.workflowId);
+    (_req, res) => {
+      const inspection = projectWorkflowInspection(store, options.publicWorkflowId);
       if (!inspection) {
         resourceNotAvailable(res);
         return;
@@ -131,6 +125,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
 
   app.listen(port, host, () => {
     console.log(`agent-service-interop x402 public inspection listening on http://${host}:${port}`);
+    console.log(`public endpoint: http://${host}:${port}${X402_PUBLIC_INSPECTION_PATH}`);
     console.log(`public synthetic workflow: ${publicWorkflowId}`);
     console.log(`price per inspection: ${process.env.X402_INSPECTION_PRICE ?? DEFAULT_X402_INSPECTION_PRICE}`);
     console.log(`Circle Gateway facilitator: ${process.env.X402_FACILITATOR_URL ?? CIRCLE_GATEWAY_TESTNET_URL}`);
