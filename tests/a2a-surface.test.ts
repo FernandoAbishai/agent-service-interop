@@ -149,7 +149,7 @@ test('A2A agent card advertises only the narrow read-only HTTP+JSON surface', as
   }
 });
 
-test('AIP and A2A expose the same workflow references without conflating Task and Job state', async () => {
+test('AIP, A2A and HTTP expose one read-only workflow observation without conflating Task and Job state', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'agent-service-interop-a2a-shared-'));
   const store = new FileFsmStore(join(dir, 'fsm.json'));
   try {
@@ -157,6 +157,7 @@ test('AIP and A2A expose the same workflow references without conflating Task an
     const canonical = toCanonicalWorkflow(session);
     assert.equal(canonical.quote.status, 'accepted');
     assert.equal(canonical.job.status, 'scheduled');
+    const before = structuredClone(store.read());
 
     await withA2AServer(store, async (baseUrl) => {
       const client = await a2aClient(baseUrl);
@@ -173,39 +174,51 @@ test('AIP and A2A expose the same workflow references without conflating Task an
       const part = task.artifacts[0].parts[0];
       assert.equal(part.content?.$case, 'text');
       if (part.content?.$case !== 'text') throw new Error('expected JSON text artifact');
-      const payload = JSON.parse(part.content.value) as any;
+      const a2aPayload = JSON.parse(part.content.value) as any;
 
-      assert.equal(payload.references.canonical_workflow_id, canonical.workflow_id);
-      assert.equal(payload.references.requirement_id, canonical.requirement.requirement_id);
-      assert.equal(payload.references.quote_id, canonical.quote.quote_id);
-      assert.equal(payload.references.aip_offer_id, offerResponse.offer.id);
-      assert.equal(payload.references.operational_job_id, canonical.job.job_id);
-      assert.equal(payload.observed_state.quote_status, 'accepted');
-      assert.equal(payload.observed_state.job_status, 'scheduled');
-      assert.equal(payload.observed_state.completion_status, 'not_claimed');
-      assert.equal(payload.observed_state.customer_decision_status, 'pending');
-      assert.match(payload.semantics.a2a_task_state_meaning, /not physical service execution state/i);
+      assert.equal(a2aPayload.references.canonical_workflow_id, canonical.workflow_id);
+      assert.equal(a2aPayload.references.requirement_id, canonical.requirement.requirement_id);
+      assert.equal(a2aPayload.references.quote_id, canonical.quote.quote_id);
+      assert.equal(a2aPayload.references.aip_offer_id, offerResponse.offer.id);
+      assert.equal(a2aPayload.references.operational_job_id, canonical.job.job_id);
+      assert.equal(a2aPayload.observed_state.quote_status, 'accepted');
+      assert.equal(a2aPayload.observed_state.job_status, 'scheduled');
+      assert.equal(a2aPayload.observed_state.completion_status, 'not_claimed');
+      assert.equal(a2aPayload.observed_state.customer_decision_status, 'pending');
+      assert.match(a2aPayload.semantics.interaction_state_meaning, /not physical service execution state/i);
 
-      const after = store.getBySession(SESSION);
-      assert.ok(after);
-      assert.equal(after.job.status, 'scheduled');
-      assert.equal(after.quote.status, 'accepted');
-      assert.equal(after.binding?.full_name, 'Jane Fixture');
+      const httpResponse = await fetch(`${baseUrl}/api/interop/workflows/${canonical.workflow_id}/inspection`);
+      assert.equal(httpResponse.status, 200);
+      const httpPayload = await httpResponse.json();
+      assert.deepEqual(httpPayload, a2aPayload, 'A2A and HTTP must expose the same shared inspection projection');
+
+      const after = store.read();
+      assert.deepEqual(after, before, 'both read-only surfaces must leave authoritative FSM state unchanged');
     });
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
 });
 
-test('unknown canonical workflow fails the A2A interaction without creating operational state', async () => {
+test('unknown workflow fails through both surfaces without creating operational state', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'agent-service-interop-a2a-missing-'));
   const store = new FileFsmStore(join(dir, 'fsm.json'));
   try {
     await withA2AServer(store, async (baseUrl) => {
+      const missingWorkflow = 'wf-aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
       const client = await a2aClient(baseUrl);
-      const result = await client.sendMessage(workflowRequest('wf-aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'));
+      const result = await client.sendMessage(workflowRequest(missingWorkflow));
       assert.ok('status' in result);
       assert.equal((result as Task).status.state, TaskState.TASK_STATE_FAILED);
+
+      const response = await fetch(`${baseUrl}/api/interop/workflows/${missingWorkflow}/inspection`);
+      assert.equal(response.status, 404);
+      assert.deepEqual(await response.json(), {
+        error: {
+          code: 'WORKFLOW_NOT_FOUND',
+          message: 'Workflow not found'
+        }
+      });
       assert.deepEqual(store.read().sessions, {});
     });
   } finally {
