@@ -1,0 +1,86 @@
+openapi: 3.1.0
+info:
+  title: Agent Service Interop Inspection API
+  version: 0.1.0-experimental
+  description: >-
+    Read-only HTTP projection over the same underlying service workflow exposed
+    through the repository's A2A inspection skill. This API does not authorize,
+    schedule, complete, settle, or otherwise mutate the real-world service job.
+paths:
+  /api/interop/workflows/{workflow_id}/inspection:
+    get:
+      operationId: inspectServiceWorkflow
+      summary: Inspect an existing service workflow
+      description: >-
+        Returns a read-only interoperability observation for an existing workflow.
+        A successful response describes observed workflow state only; it does not
+        imply physical-service completion, customer acceptance, or payment.
+      parameters:
+        - name: workflow_id
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: '^wf-.+$'
+      responses:
+        '200':
+          description: Read-only workflow inspection
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkflowInspection'
+        '404':
+          description: Workflow not found
+components:
+  schemas:
+    WorkflowInspection:
+      type: object
+      required: [semantics, references, observed_state]
+      properties:
+        semantics:
+          type: object
+          required: [interaction_state_meaning, operational_authority]
+          properties:
+            interaction_state_meaning:
+              type: string
+            operational_authority:
+              type: string
+        references:
+          type: object
+          required:
+            - canonical_workflow_id
+            - requirement_id
+            - quote_id
+            - aip_offer_id
+            - operational_job_id
+          properties:
+            canonical_workflow_id:
+              type: string
+            requirement_id:
+              type: string
+            quote_id:
+              type: string
+            aip_offer_id:
+              type: string
+            operational_job_id:
+              type: string
+        observed_state:
+          type: object
+          required:
+            - quote_status
+            - job_status
+            - scheduled_for
+            - completion_status
+            - customer_decision_status
+          properties:
+            quote_status:
+              type: string
+            job_status:
+              type: string
+            scheduled_for:
+              type: [string, 'null']
+              format: date-time
+            completion_status:
+              type: string
+            customer_decision_status:
+              type: string
