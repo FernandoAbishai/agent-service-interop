@@ -9,166 +9,219 @@ import {
   rmSync,
   writeFileSync
 } from 'node:fs';
-import { dirname } from 'node:path';
+import { dirname, join } from 'node:path';
 import { randomUUID } from 'node:crypto';
-import { spawn } from 'node:child_process';
-import { createRequire } from 'node:module';
 
-function envMs(name: string, fallback: number): number {
-  const value = Number(process.env[name] ?? fallback);
-  return Number.isFinite(value) && value > 0 ? value : fallback;
+const LOCK_WAIT_MS = 25;
+const LOCK_WAIT_TIMEOUT_MS = 40_000;
+const waiter = new Int32Array(new SharedArrayBuffer(Int32Array.BYTES_PER_ELEMENT));
+
+type LockOwner = {
+  version: 1;
+  pid: number;
+  token: string;
+};
+
+function processIsAlive(pid: number): boolean {
+  if (!Number.isInteger(pid) || pid <= 0) return false;
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch (error: unknown) {
+    return (error as { code?: string }).code === 'EPERM';
+  }
 }
 
-const LOCK_STALE_MS = envMs('THI_FILE_LOCK_STALE_MS', 30_000);
-const LOCK_UPDATE_MS = envMs('THI_FILE_LOCK_UPDATE_MS', 10_000);
-const LOCK_RETRY_MS = 50;
-const LOCK_RETRY_COUNT = 700;
-const ACQUIRE_WAIT_MS = 40_000;
-const RELEASE_WAIT_MS = 10_000;
-const waiter = new Int32Array(new SharedArrayBuffer(Int32Array.BYTES_PER_ELEMENT));
-const moduleRequire = createRequire(import.meta.url);
-const PROPER_LOCKFILE_MODULE = moduleRequire.resolve('proper-lockfile');
+function ownerPath(lockPath: string): string {
+  return join(lockPath, 'owner.json');
+}
 
-// The helper owns the lease so its heartbeat keeps running even while the caller's
-// synchronous read/modify/write section blocks the caller event loop.
-const LOCK_HELPER_SOURCE = String.raw`
-  const fs = require('node:fs');
-  const path = require('node:path');
-  const lockfile = require(process.env.THI_LOCK_MODULE);
-  const filePath = process.env.THI_LOCK_FILE;
-  const controlPath = process.env.THI_LOCK_CONTROL;
-  const parentPid = Number(process.env.THI_LOCK_PARENT_PID);
-  const stale = Number(process.env.THI_LOCK_STALE_MS);
-  const update = Number(process.env.THI_LOCK_UPDATE_MS);
-  const retryMs = Number(process.env.THI_LOCK_RETRY_MS);
-  const retryCount = Number(process.env.THI_LOCK_RETRY_COUNT);
-
-  function statusPath(name) {
-    return path.join(controlPath, name);
-  }
-
-  function writeStatus(name, value = '') {
+function readLockOwner(lockPath: string): LockOwner | undefined {
+  for (let attempt = 0; attempt < 5; attempt += 1) {
     try {
-      fs.writeFileSync(statusPath(name), value, { encoding: 'utf8', flag: 'wx' });
-    } catch (error) {
-      if (!error || error.code !== 'EEXIST') throw error;
+      const owner = JSON.parse(readFileSync(ownerPath(lockPath), 'utf8')) as Partial<LockOwner>;
+      if (owner.version !== 1 || !Number.isInteger(owner.pid) || typeof owner.token !== 'string' || owner.token.length === 0) {
+        throw new Error(`Malformed file-state lock owner: ${lockPath}`);
+      }
+      return owner as LockOwner;
+    } catch (error: unknown) {
+      if ((error as { code?: string }).code !== 'ENOENT') throw error;
+      if (!existsSync(lockPath)) return undefined;
+      // The previous owner may have disappeared between the owner-file lookup
+      // and the directory check while a successor was published. Retry that
+      // handoff window, but never reinterpret persistent malformed state.
+      Atomics.wait(waiter, 0, 0, 1);
     }
   }
+  throw new Error(`Malformed file-state lock owner: ${lockPath}`);
+}
 
-  function parentIsAlive() {
-    if (process.ppid !== parentPid) return false;
-    try {
-      process.kill(parentPid, 0);
-      return true;
-    } catch (error) {
-      return Boolean(error && error.code === 'EPERM');
-    }
+function prepareOwnedDirectory(candidatePath: string, owner: LockOwner): string {
+  mkdirSync(candidatePath);
+  const metadataPath = ownerPath(candidatePath);
+  writeFileSync(metadataPath, `${JSON.stringify(owner)}\n`, { encoding: 'utf8', flag: 'wx' });
+
+  // Make the owner record durable before atomically publishing the directory.
+  const fd = openSync(metadataPath, 'r');
+  try {
+    fsyncSync(fd);
+  } finally {
+    closeSync(fd);
   }
+  return candidatePath;
+}
 
-  (async () => {
-    try {
-      const release = await lockfile.lock(filePath, {
-        realpath: false,
-        stale,
-        update,
-        retries: {
-          retries: retryCount,
-          factor: 1,
-          minTimeout: retryMs,
-          maxTimeout: retryMs
+function prepareCandidate(lockPath: string, owner: LockOwner): string {
+  return prepareOwnedDirectory(`${lockPath}.candidate.${owner.pid}.${owner.token}`, owner);
+}
+
+function contentionError(error: unknown): boolean {
+  const code = (error as { code?: string }).code;
+  return code === 'EEXIST' || code === 'ENOTEMPTY' || code === 'EPERM' || code === 'EACCES';
+}
+
+function recoverDeadRecoveryClaim(recoveryPath: string, observed: LockOwner): boolean {
+  if (processIsAlive(observed.pid)) return false;
+
+  // Retain one deterministic, non-empty tombstone for the observed recovery
+  // generation. A delayed contender cannot rename a successor claim over it.
+  const tombstonePath = `${recoveryPath}.dead.${observed.token}`;
+  try {
+    renameSync(recoveryPath, tombstonePath);
+    return true;
+  } catch (error: unknown) {
+    const code = (error as { code?: string }).code;
+    if (code === 'ENOENT') return true;
+    if (code === 'EEXIST' || code === 'ENOTEMPTY') return true;
+    if (code === 'EPERM' && existsSync(tombstonePath)) return true;
+    throw error;
+  }
+}
+
+function claimDeadOwnerRecovery(lockPath: string, observed: LockOwner): LockOwner | undefined {
+  const recoveryPath = join(lockPath, `.recover-${observed.token}`);
+  const recoveryOwner: LockOwner = { version: 1, pid: process.pid, token: randomUUID() };
+  // Prepare outside the volatile dead-lock directory. Another recovery may move
+  // that whole generation while this contender is constructing its claim.
+  const candidatePath = prepareOwnedDirectory(
+    `${lockPath}.recovery-candidate.${observed.token}.${recoveryOwner.pid}.${recoveryOwner.token}`,
+    recoveryOwner
+  );
+
+  try {
+    while (true) {
+      try {
+        renameSync(candidatePath, recoveryPath);
+        return recoveryOwner;
+      } catch (error: unknown) {
+        if (!contentionError(error)) {
+          if ((error as { code?: string }).code === 'ENOENT') return undefined;
+          throw error;
         }
-      });
+      }
 
-      writeStatus('acquired');
-      let releasing = false;
-      const timer = setInterval(async () => {
-        if (releasing) return;
-        const parentAlive = parentIsAlive();
-        if (parentAlive && !fs.existsSync(statusPath('release'))) return;
-        releasing = true;
-        clearInterval(timer);
-        try {
-          await release();
-          writeStatus('released');
-        } catch (error) {
-          writeStatus('error', error && error.message ? error.message : String(error));
-        } finally {
-          if (!parentAlive) {
-            try { fs.rmSync(controlPath, { recursive: true, force: true }); } catch {}
-          }
-        }
-      }, 25);
-    } catch (error) {
-      writeStatus('error', error && error.message ? error.message : String(error));
+      const existing = readLockOwner(recoveryPath);
+      if (!existing) continue;
+      if (recoverDeadRecoveryClaim(recoveryPath, existing)) continue;
+      return undefined;
     }
-  })();
-`;
-
-function waitForStatus(controlPath: string, successName: string, timeoutMs: number): void {
-  const successPath = `${controlPath}/${successName}`;
-  const errorPath = `${controlPath}/error`;
-  const deadline = Date.now() + timeoutMs;
-  while (Date.now() < deadline) {
-    if (existsSync(successPath)) return;
-    if (existsSync(errorPath)) {
-      throw new Error(readFileSync(errorPath, 'utf8') || `File-state lock helper failed during ${successName}`);
-    }
-    Atomics.wait(waiter, 0, 0, 25);
+  } finally {
+    if (existsSync(candidatePath)) rmSync(candidatePath, { recursive: true, force: true });
   }
-  throw new Error(`Timed out waiting for file-state lock helper status: ${successName}`);
+}
+
+function recoverDeadOwner(lockPath: string, observed: LockOwner): boolean {
+  if (processIsAlive(observed.pid)) return false;
+
+  // Recovery is itself PID+token owned. A crash after claiming recovery leaves a
+  // recoverable claim rather than pinning the dead writer forever.
+  const recoveryOwner = claimDeadOwnerRecovery(lockPath, observed);
+  if (!recoveryOwner) return false;
+
+  const current = readLockOwner(lockPath);
+  if (!current || current.pid !== observed.pid || current.token !== observed.token) {
+    // The fixed path advanced to a successor after our observation. The
+    // old-owner-token recovery directory is irrelevant to that successor and
+    // disappears when the successor lock generation is released/recovered.
+    return true;
+  }
+  if (processIsAlive(current.pid)) return false;
+
+  const quarantinePath = `${lockPath}.dead.${observed.token}.${recoveryOwner.token}`;
+  try {
+    renameSync(lockPath, quarantinePath);
+  } catch (error: unknown) {
+    if ((error as { code?: string }).code === 'ENOENT') return true;
+    throw error;
+  }
+  rmSync(quarantinePath, { recursive: true, force: true });
+  return true;
+}
+
+function releaseOwnedLock(lockPath: string, owner: LockOwner): void {
+  const current = readLockOwner(lockPath);
+  if (!current || current.pid !== owner.pid || current.token !== owner.token) {
+    throw new Error(`File-state lock ownership changed before release: ${lockPath}`);
+  }
+
+  // Move the complete generation away from the fixed path in one filesystem
+  // operation. This never exposes an empty live-lock directory to contenders.
+  const releasedPath = `${lockPath}.released.${owner.token}.${randomUUID()}`;
+  renameSync(lockPath, releasedPath);
+  rmSync(releasedPath, { recursive: true, force: true });
 }
 
 export function withFileLock<T>(filePath: string, run: () => T): T {
   mkdirSync(dirname(filePath), { recursive: true });
-  const controlPath = `${filePath}.lock-control.${process.pid}.${randomUUID()}`;
-  mkdirSync(controlPath, { recursive: true });
-  const helper = spawn(process.execPath, ['-e', LOCK_HELPER_SOURCE], {
-    stdio: 'ignore',
-    env: {
-      ...process.env,
-      THI_LOCK_FILE: filePath,
-      THI_LOCK_CONTROL: controlPath,
-      THI_LOCK_PARENT_PID: String(process.pid),
-      THI_LOCK_MODULE: PROPER_LOCKFILE_MODULE,
-      THI_LOCK_STALE_MS: String(LOCK_STALE_MS),
-      THI_LOCK_UPDATE_MS: String(LOCK_UPDATE_MS),
-      THI_LOCK_RETRY_MS: String(LOCK_RETRY_MS),
-      THI_LOCK_RETRY_COUNT: String(LOCK_RETRY_COUNT)
-    }
-  });
-
-  let result: T | undefined;
-  let runError: unknown;
+  const lockPath = `${filePath}.lock`;
+  const owner: LockOwner = { version: 1, pid: process.pid, token: randomUUID() };
+  const candidatePath = prepareCandidate(lockPath, owner);
+  const deadline = Date.now() + LOCK_WAIT_TIMEOUT_MS;
   let acquired = false;
-  try {
-    waitForStatus(controlPath, 'acquired', ACQUIRE_WAIT_MS);
-    acquired = true;
-    result = run();
-  } catch (error) {
-    runError = error;
-    if (!acquired) helper.kill('SIGTERM');
-  }
 
-  let releaseError: unknown;
   try {
-    if (existsSync(`${controlPath}/acquired`)) {
-      writeFileSync(`${controlPath}/release`, '', { flag: 'wx' });
-      waitForStatus(controlPath, 'released', RELEASE_WAIT_MS);
+    while (!acquired) {
+      try {
+        renameSync(candidatePath, lockPath);
+        acquired = true;
+        break;
+      } catch (error: unknown) {
+        if (!contentionError(error)) throw error;
+      }
+
+      const observed = readLockOwner(lockPath);
+      if (!observed) continue;
+      if (recoverDeadOwner(lockPath, observed)) continue;
+      if (Date.now() >= deadline) {
+        throw new Error(`Timed out waiting for live file-state lock owner ${observed.pid}: ${lockPath}`);
+      }
+      Atomics.wait(waiter, 0, 0, LOCK_WAIT_MS);
     }
-  } catch (error) {
-    releaseError = error;
-    helper.kill('SIGTERM');
-  } finally {
-    rmSync(controlPath, { recursive: true, force: true });
-    helper.unref();
-  }
 
-  if (runError !== undefined && releaseError !== undefined) {
-    throw new AggregateError([runError, releaseError], 'File-state operation and lock release both failed');
+    let result: T | undefined;
+    let runError: unknown;
+    try {
+      result = run();
+    } catch (error) {
+      runError = error;
+    }
+
+    let releaseError: unknown;
+    try {
+      releaseOwnedLock(lockPath, owner);
+    } catch (error) {
+      releaseError = error;
+    }
+
+    if (runError !== undefined && releaseError !== undefined) {
+      throw new AggregateError([runError, releaseError], 'File-state operation and lock release both failed');
+    }
+    if (releaseError !== undefined) throw releaseError;
+    if (runError !== undefined) throw runError;
+    return result as T;
+  } finally {
+    if (!acquired) rmSync(candidatePath, { recursive: true, force: true });
   }
-  if (releaseError !== undefined) throw releaseError;
-  if (runError !== undefined) throw runError;
-  return result as T;
 }
 
 export function atomicWriteJson(filePath: string, value: unknown): void {

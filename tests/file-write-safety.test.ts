@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, utimesSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { randomUUID } from 'node:crypto';
@@ -39,7 +39,7 @@ function runNode(script: string, env: Record<string, string>, cwd = REPO_ROOT): 
   });
 }
 
-test('file lock helper resolves its dependency independently from caller cwd', async () => {
+test('file lock works independently from caller cwd', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'agent-service-interop-lock-cwd-'));
   const statePath = join(dir, 'state.json');
   const markerPath = join(dir, 'marker');
@@ -58,11 +58,11 @@ test('file lock helper resolves its dependency independently from caller cwd', a
   }
 });
 
-test('lock helper releases promptly when its writer process dies', async () => {
+test('concurrent writers recover one crashed owner without losing updates', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'agent-service-interop-lock-parent-crash-'));
   const statePath = join(dir, 'state.json');
   const markerPath = join(dir, 'marker');
-  const script = `
+  const crashScript = `
     import { writeFileSync } from 'node:fs';
     import { withFileLock } from './src/file-state.ts';
     withFileLock(process.env.STATE_PATH, () => {
@@ -70,11 +70,94 @@ test('lock helper releases promptly when its writer process dies', async () => {
       process.kill(process.pid, 'SIGKILL');
     });
   `;
+  const sessions = Array.from({ length: 4 }, () => randomUUID());
+  const writerScript = `
+    import { FileFsmStore } from './src/fsm-store.ts';
+    const store = new FileFsmStore(process.env.STATE_PATH);
+    const sessionId = process.env.SESSION_ID;
+    store.upsertOffer({
+      request: {
+        aip_version: '0.1.0',
+        agent: { id: 'recovery-agent-' + sessionId, consent_scope: ['intake'] },
+        intake_data: {
+          postal_code: '92101',
+          service_need: 'leak_diagnosis',
+          urgency: 'this_week',
+          availability_window: 'flexible'
+        },
+        session_id: sessionId
+      },
+      offerId: 'offer-' + sessionId,
+      requirementId: 'req-' + sessionId,
+      quoteId: 'quote-' + sessionId,
+      jobId: 'job-' + sessionId,
+      validUntil: '2026-09-14T00:00:00.000Z'
+    });
+  `;
 
   try {
-    await assert.rejects(runNode(script, { STATE_PATH: statePath, MARKER_PATH: markerPath }), /child exited/);
+    await assert.rejects(runNode(crashScript, { STATE_PATH: statePath, MARKER_PATH: markerPath }), /child exited/);
     assert.equal(existsSync(markerPath), true);
-    await waitUntil(() => !existsSync(`${statePath}.lock`), 2_000);
+    assert.equal(existsSync(`${statePath}.lock`), true, 'crashed writer should leave a recoverable owned lock');
+
+    await Promise.all(sessions.map((sessionId) =>
+      runNode(writerScript, { STATE_PATH: statePath, SESSION_ID: sessionId })
+    ));
+
+    const store = new FileFsmStore(statePath);
+    const state = store.read();
+    assert.equal(Object.keys(state.sessions).length, sessions.length);
+    for (const sessionId of sessions) assert.ok(state.sessions[sessionId]);
+    assert.equal(existsSync(`${statePath}.lock`), false, 'successful recovery writers must release the live lock');
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('a crashed recovery claimant does not pin a dead writer lock', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'agent-service-interop-dead-recovery-'));
+  const statePath = join(dir, 'fsm.json');
+  const lockPath = `${statePath}.lock`;
+  const deadOwnerToken = 'dead-owner-token';
+  const recoveryPath = join(lockPath, `.recover-${deadOwnerToken}`);
+
+  try {
+    mkdirSync(lockPath);
+    writeFileSync(join(lockPath, 'owner.json'), `${JSON.stringify({
+      version: 1,
+      pid: 2_147_483_646,
+      token: deadOwnerToken
+    })}\n`);
+    mkdirSync(recoveryPath);
+    writeFileSync(join(recoveryPath, 'owner.json'), `${JSON.stringify({
+      version: 1,
+      pid: 2_147_483_645,
+      token: 'dead-recovery-token'
+    })}\n`);
+
+    const store = new FileFsmStore(statePath);
+    const sessionId = randomUUID();
+    const session = store.upsertOffer({
+      request: {
+        aip_version: '0.1.0',
+        agent: { id: 'recovery-of-recovery-agent', consent_scope: ['intake'] },
+        intake_data: {
+          postal_code: '92101',
+          service_need: 'leak_diagnosis',
+          urgency: 'this_week',
+          availability_window: 'flexible'
+        },
+        session_id: sessionId
+      },
+      offerId: `offer-${sessionId}`,
+      requirementId: `req-${sessionId}`,
+      quoteId: `quote-${sessionId}`,
+      jobId: `job-${sessionId}`,
+      validUntil: '2026-09-14T00:00:00.000Z'
+    });
+
+    assert.equal(session.session_id, sessionId);
+    assert.equal(existsSync(lockPath), false, 'recovered write must release the successor live lock');
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
@@ -161,55 +244,12 @@ test('concurrent correlation writers preserve every distinct workflow', async ()
   }
 });
 
-test('an abandoned stale lock is recovered without manual repository cleanup', () => {
-  const dir = mkdtempSync(join(tmpdir(), 'agent-service-interop-stale-lock-'));
-  const statePath = join(dir, 'fsm.json');
-  const lockPath = `${statePath}.lock`;
-
-  try {
-    mkdirSync(lockPath);
-    const old = new Date(Date.now() - 60_000);
-    utimesSync(lockPath, old, old);
-
-    const store = new FileFsmStore(statePath);
-    const sessionId = randomUUID();
-    const session = store.upsertOffer({
-      request: {
-        aip_version: '0.1.0',
-        agent: { id: 'post-crash-agent', consent_scope: ['intake'] },
-        intake_data: {
-          postal_code: '92101',
-          service_need: 'leak_diagnosis',
-          urgency: 'this_week',
-          availability_window: 'flexible'
-        },
-        session_id: sessionId
-      },
-      offerId: `offer-${sessionId}`,
-      requirementId: `req-${sessionId}`,
-      quoteId: `quote-${sessionId}`,
-      jobId: `job-${sessionId}`,
-      validUntil: '2026-09-14T00:00:00.000Z'
-    });
-
-    assert.equal(session.session_id, sessionId);
-    assert.equal(existsSync(lockPath), false, 'stale lock should be replaced and released after the successful write');
-  } finally {
-    rmSync(dir, { recursive: true, force: true });
-  }
-});
-
-test('a live owner keeps exclusivity while its synchronous critical section exceeds the stale lease', async () => {
+test('a live owner keeps exclusivity through a long synchronous critical section', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'agent-service-interop-live-lock-'));
   const statePath = join(dir, 'state.json');
   const firstEntered = join(dir, 'first-entered');
   const firstDone = join(dir, 'first-done');
   const secondEntered = join(dir, 'second-entered');
-  const lockEnv = {
-    STATE_PATH: statePath,
-    THI_FILE_LOCK_STALE_MS: '5000',
-    THI_FILE_LOCK_UPDATE_MS: '1000'
-  };
   const firstScript = `
     import { writeFileSync } from 'node:fs';
     import { withFileLock } from './src/file-state.ts';
@@ -230,20 +270,20 @@ test('a live owner keeps exclusivity while its synchronous critical section exce
 
   try {
     const first = runNode(firstScript, {
-      ...lockEnv,
+      STATE_PATH: statePath,
       FIRST_ENTERED: firstEntered,
       FIRST_DONE: firstDone
     });
     await waitUntil(() => existsSync(firstEntered));
     const second = runNode(secondScript, {
-      ...lockEnv,
+      STATE_PATH: statePath,
       SECOND_ENTERED: secondEntered
     });
 
     await Promise.all([first, second]);
     const firstDoneAt = Number(readFileSync(firstDone, 'utf8'));
     const secondEnteredAt = Number(readFileSync(secondEntered, 'utf8'));
-    assert.ok(secondEnteredAt >= firstDoneAt, 'second writer must not stale-steal a lock from a live blocked owner');
+    assert.ok(secondEnteredAt >= firstDoneAt, 'second writer must not replace a lock owned by a live blocked process');
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
