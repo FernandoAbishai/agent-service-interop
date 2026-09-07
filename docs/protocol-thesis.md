@@ -44,24 +44,35 @@ discover capability
 
 A source or protocol may support only a subset. Stage order may vary by vertical. The purpose of the sequence is to test which semantics survive multiple systems and protocols, not to force all commerce into one lifecycle.
 
-## Candidate kernel concepts
+## Candidate protocol surface
 
-These concepts are candidates for future TriHerm protocol semantics. They are **not yet normative primitives** merely because they appear here:
+The future protocol should distinguish **kernel mechanisms** from **economic semantics/profiles**. The kernel should stay small and structural; economic concepts should be promoted only when independent implementation evidence proves a stable shared meaning.
+
+### Kernel mechanism candidates
+
+These are candidates for the minimal coordination machinery itself:
+
+- protocol/version envelope and compatibility metadata;
+- actor and role references;
+- protocol-neutral correlation and typed references;
+- authority and provenance metadata;
+- capability/extension negotiation;
+- authorization/delegation references;
+- command preconditions, idempotency, and replay semantics only where cross-adapter evidence shows they must be interoperable rather than purely adapter-local.
+
+### Economic semantics under falsification
+
+These are economically meaningful candidates, but **not automatically kernel primitives**:
 
 - capability / offering reference;
 - intent or requirement;
 - offer;
 - commitment;
-- actor and role references;
-- protocol-neutral correlation;
 - operational execution references;
 - occurrence / appointment / execution-unit references where the source exposes them;
 - evidence references;
 - explicit decision or acceptance references;
-- settlement or obligation references;
-- authority and provenance;
-- authorization / delegation references;
-- capability negotiation, extensions, and versioning.
+- settlement or obligation references.
 
 Each candidate must be classified from implementation evidence. The architectural destination vocabulary remains `CANONICAL`, `EXTENSION`, `REFERENCE_ONLY`, `PROTOCOL_SPECIFIC`, `SYSTEM_SPECIFIC`, or `NOT_NORMALIZABLE`; evidence maturity can separately remain `EARNED_OBSERVATION`, `NORMALIZED_CANDIDATE`, or `DEFERRED` as used by the existing falsification work. An observation that has earned cross-system evidence is therefore not automatically a canonical protocol primitive.
 
@@ -76,6 +87,7 @@ The protocol objective does not reverse the evidence already earned by this repo
 5. **Completion, evidence, acceptance, authorization, and settlement remain separable.** One does not imply another without source-backed semantics.
 6. **Normalization must be reversible enough to audit.** Source and protocol references must remain available to explain important derived state.
 7. **Vertical-specific semantics may remain outside the kernel.** A small universal coordination core is preferred over a large universal business-object schema.
+8. **Canonicalization is not protocolization.** A normalized field or observation can be useful internally without becoming part of the public TriHerm protocol contract.
 
 ## Relationship to existing protocols
 
