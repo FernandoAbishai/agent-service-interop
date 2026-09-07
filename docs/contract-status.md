@@ -25,6 +25,7 @@ External versions are inputs to an experiment, not versions of a repository-loca
 | `schemas/triherm-kernel-envelope.schema.json` | `0.1.0-experimental` | Minimal pre-specification coordination envelope: profile/version, actors, typed refs/correlation, authority, provenance, capabilities/extensions, and profile-owned payload; not a stable/normative protocol release |
 | `openapi.yaml` | `0.3.0-experimental` | Description of experimental read-only inspection surfaces; v0.3 separates correlation refs from optional source-backed facets |
 | `ServiceRequestObservation` | earned observation-layer vocabulary | Narrow AIP/UBL service-request facet; not canonical protocol state |
+| `OfferResponseObservation` | earned observation-layer vocabulary | TH-INTEROP-23 thin AIP Offer / UBL Quotation response relation; excludes normalized money, lifecycle, and commitment semantics |
 | `OccurrenceObservation` | earned observation-layer vocabulary | Cross-system Appointment/Visit observation used by ServiceTitan-shaped and Jobber mappings; no normalized lifecycle |
 | `WorkflowInspection` | `0.3.0-experimental` shared projection | Requires protocol-neutral correlation refs; source-backed quote/job facets are optional and no AIP origin is required |
 
@@ -61,6 +62,7 @@ Before a repository-local contract is described as stable, normative, or univers
 - The manifest declares session-scoped retention, but the file-backed research store does not yet implement expiry/deletion semantics; do not interpret that declaration as a production retention guarantee.
 - The canonical JSON Schema now has fixture/runtime projection tests; the OpenAPI description still lacks dedicated runtime contract validation.
 - The UBL RFQ fixture is a semantic falsifier shape, not a claim of XML/schema conformance to a specific UBL release.
+- The UBL Quotation/Order fixtures are parsed semantic falsifier shapes pinned conceptually to UBL 2.4; they are not XML/schema conformance evidence. TH-INTEROP-23 deliberately leaves rich quote money/terms and generic Commitment unnormalized.
 - Synthetic AIP intake/Bind replay now has explicit exact-retry and `409 IDEMPOTENCY_CONFLICT` behavior, but external-system write preconditions, reconciliation, and distributed exactly-once semantics remain open.
 
 These are next-gate items, not permission to enlarge the normalized core.

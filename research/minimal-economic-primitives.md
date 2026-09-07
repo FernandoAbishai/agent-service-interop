@@ -2,7 +2,7 @@
 
 _Status: architecture falsification gate. TH-INTEROP-16 narrowing result accepted. This document is evidence for the future TriHerm protocol thesis; it does not by itself define a public/normative protocol or promote new fields into the canonical schema._
 
-_Last checked against primary sources: 2026-08-16._
+_Last checked against primary sources: 2026-09-07._
 
 ## Question
 
@@ -41,7 +41,8 @@ If those conditions do not hold, the concept stays outside the minimal core.
 |---|---|---|---|
 | Provider / business identity | `REFERENCE_ONLY` | Provider identity and capability discovery already live in business systems and protocol discovery surfaces. TriHerm needs correlation, not a new universal identity authority. | Promote only a minimal identity facet if two independent protocols require the same normalized fields and source references alone are insufficient. |
 | Service request facet | `EARNED_OBSERVATION` | TH-INTEROP-16 mapped an AIP intake and a UBL RFQ line and found a thin common facet: requested service, minimal location, provenance/source identity, plus explicit unmapped source semantics. The broader `Requirement` concept did **not** survive. | Do not enlarge this facet without another falsifier. Canonical promotion, if ever needed, requires an explicit decision separate from this observation-layer result. |
-| Offer / quote | `NORMALIZED_CANDIDATE` | Quote semantics are prior art in AIP and UBL and exist natively in FSM/CRM systems. The interoperability need is translation and provenance, not invention. | Resolve exact money representation first; then prove reversible-enough mapping across at least one protocol representation and one real operational quote/estimate source. |
+| Offer-response facet | `EARNED_OBSERVATION` | TH-INTEROP-23 mapped an AIP Offer and a UBL 2.4 Quotation projection and found only a thin common relation: source identity, the request/RFQ line answered, provenance/observation time, and explicit unmapped terms. Expiry/validity and money remain source-specific. | Re-test against an authoritative operational quote/estimate source before any canonical/profile promotion. |
+| Rich Offer / quote | `NORMALIZED_CANDIDATE` | Money, line-item, terms, lifecycle, and provider-specific semantics did not survive TH-INTEROP-23 without unresolved representation choices. | Resolve exact money representation first; then prove reversible-enough mapping across at least one protocol representation and one real operational quote/estimate source. |
 | Commitment / order / accepted obligation | `DEFERRED` | AIP Bind is an active-relationship handoff, while UBL Order creates a contractual obligation. These are not safe universal synonyms for booking, accepted estimate, payment, or work authorization. | Observe at least two authoritative commitment transitions and prove a common invariant more precise than `accepted=true`. |
 | Operational Job / Work Order | `REFERENCE_ONLY` | Job/work-order lifecycle belongs to the provider system. A2A/MCP task lifecycle is also not the physical-service lifecycle. TriHerm should preserve source identity and relationships, not replace the FSM. | Only normalize a narrow facet if cross-system coordination cannot be achieved with references plus earned sub-primitives such as Occurrence. |
 | Occurrence | `EARNED_OBSERVATION` | ServiceTitan-shaped Appointment and a real Jobber Visit both support a distinct child work occurrence with independent identity, parent relationship, source-native status, and nullable schedule. | Do not add lifecycle semantics. Canonical promotion requires an explicit decision that the current cross-system evidence is sufficient or a further independent falsifier materially changes that confidence. |
@@ -71,7 +72,8 @@ correlation + provenance/authority
           |
           +-- earned ServiceRequestObservation
           +-- earned OccurrenceObservation
-          +-- experimental Quote representation
+          +-- earned thin OfferResponseObservation
+          +-- historical/experimental rich Quote representation
           +-- references to authoritative operational/protocol objects
 ```
 
@@ -140,13 +142,13 @@ Primary source: https://modelcontextprotocol.io/specification/2025-11-25/basic/u
 
 ### UCP
 
-The stable 2026-04-08 UCP specification defines discoverable services/capabilities and commerce surfaces. Use UCP semantics only where the selected service/capability actually applies; do not infer a generic field-service lifecycle from the existence of a UCP transport or capability.
+The current 2026-08-25 UCP release defines discoverable services/capabilities and shopping checkout/order surfaces. Use UCP semantics only where the selected service/capability actually applies; do not infer a generic field-service lifecycle or generic Commitment primitive from the existence of a UCP transport, checkout, or order capability.
 
-Primary source: https://ucp.dev/2026-04-08/specification/overview/
+Primary sources: https://ucp.dev/2026-08-25/specification/overview/ and https://ucp.dev/2026-08-25/specification/shopping/order/
 
 ### UBL
 
-UBL 2.4 contains Request For Quotation, Quotation, Order and related mature procurement semantics. Requirement/quote/order concepts therefore have strong prior art and must not be presented as novel primitives.
+UBL 2.4 contains Request For Quotation, Quotation, Order and related mature procurement semantics. Its Ordering process explicitly creates a contractual obligation between buyer and seller, which is one reason an AIP Bind cannot be silently renamed into the same universal Commitment transition. Requirement/quote/order concepts therefore have strong prior art and must not be presented as novel primitives.
 
 Primary source: https://docs.oasis-open.org/ubl/UBL-2.4.html
 
@@ -156,12 +158,12 @@ See `research/prior-art.md` for ERC-8183, RAILS, TessPay, and VCAP. TH-INTEROP-1
 
 ## Next falsification candidates
 
-The Requirement falsifier is complete and its narrowing result is accepted. The next code-bearing experiment should attack a remaining uncertain boundary rather than enlarge `ServiceRequestObservation`.
+The Requirement falsifier and the Request -> Offer -> Commitment boundary falsifier are complete at their current evidence level. The next code-bearing experiment should attack a remaining uncertain boundary rather than enlarge the observation vocabularies by assumption.
 
 High-value options:
 
-1. **Quote translation falsifier** — only after resolving the exact-money representation gate; map one authoritative quote/estimate through an independent representation and test round-trip/auditability.
-2. **Commitment authority falsifier** — compare two real binding/acceptance transitions and determine whether a common `Commitment` concept exists without conflating quote acceptance, booking, order creation, payment, and work authorization.
+1. **Operational quote falsifier** — after resolving the exact-money representation gate, map one authoritative quote/estimate through an independent representation and test round-trip/auditability against the earned thin OfferResponseObservation.
+2. **Commitment authority falsifier** — compare two authoritative real binding/acceptance transitions and determine whether a common `Commitment` concept exists without conflating quote acceptance, booking, order creation, payment, and work authorization.
 3. **Evidence/verification falsifier** — use a real evidence producer and verifier to determine whether TriHerm needs a shared evidence reference/verification decision surface at all.
 
 Do not select an option because it produces the largest schema. Select the smallest experiment that can invalidate an architectural assumption.
