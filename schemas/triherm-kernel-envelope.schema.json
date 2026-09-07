@@ -1,0 +1,186 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/agent-service-interop/schemas/triherm-kernel-envelope.schema.json",
+  "title": "TriHerm Protocol Kernel Envelope v0.1 Experimental",
+  "description": "EXPERIMENTAL pre-specification JSON encoding for the minimal TriHerm coordination kernel. It defines structural coordination metadata only, not economic workflow semantics or a stable public protocol.",
+  "type": "object",
+  "required": [
+    "kernel_version",
+    "profile",
+    "message_id",
+    "actors",
+    "references",
+    "authority",
+    "provenance",
+    "payload"
+  ],
+  "properties": {
+    "kernel_version": { "const": "0.1.0-experimental" },
+    "profile": { "$ref": "#/$defs/profile" },
+    "message_id": { "$ref": "#/$defs/nonEmptyToken" },
+    "correlation": { "$ref": "#/$defs/correlation" },
+    "actors": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/actor" }
+    },
+    "references": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/reference" }
+    },
+    "authority": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/authorityDescriptor" }
+    },
+    "provenance": { "$ref": "#/$defs/provenance" },
+    "capabilities": { "$ref": "#/$defs/capabilityRequirements" },
+    "extensions": {
+      "type": "object",
+      "propertyNames": { "minLength": 1 },
+      "additionalProperties": true
+    },
+    "payload": {
+      "description": "Profile-owned JSON object. The kernel does not assign economic meaning to its members.",
+      "type": "object",
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "nonEmptyToken": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256
+    },
+    "profile": {
+      "type": "object",
+      "required": ["id", "version"],
+      "properties": {
+        "id": { "$ref": "#/$defs/nonEmptyToken" },
+        "version": { "$ref": "#/$defs/nonEmptyToken" }
+      },
+      "additionalProperties": false
+    },
+    "actor": {
+      "type": "object",
+      "required": ["actor_ref", "role"],
+      "properties": {
+        "actor_ref": { "$ref": "#/$defs/nonEmptyToken" },
+        "role": { "$ref": "#/$defs/nonEmptyToken" },
+        "reference_ids": {
+          "description": "Optional links to typed external references. actor_ref is envelope-local and is not a global identity.",
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/nonEmptyToken" }
+        }
+      },
+      "additionalProperties": false
+    },
+    "operationalReference": {
+      "type": "object",
+      "required": ["ref_id", "kind", "system", "object_type", "id"],
+      "properties": {
+        "ref_id": { "$ref": "#/$defs/nonEmptyToken" },
+        "kind": { "const": "operational" },
+        "system": { "$ref": "#/$defs/nonEmptyToken" },
+        "object_type": { "$ref": "#/$defs/nonEmptyToken" },
+        "id": { "$ref": "#/$defs/nonEmptyToken" }
+      },
+      "additionalProperties": false
+    },
+    "protocolReference": {
+      "type": "object",
+      "required": ["ref_id", "kind", "protocol", "object_type", "id"],
+      "properties": {
+        "ref_id": { "$ref": "#/$defs/nonEmptyToken" },
+        "kind": { "const": "protocol" },
+        "protocol": { "$ref": "#/$defs/nonEmptyToken" },
+        "protocol_version": { "$ref": "#/$defs/nonEmptyToken" },
+        "object_type": { "$ref": "#/$defs/nonEmptyToken" },
+        "id": { "$ref": "#/$defs/nonEmptyToken" }
+      },
+      "additionalProperties": false
+    },
+    "reference": {
+      "oneOf": [
+        { "$ref": "#/$defs/operationalReference" },
+        { "$ref": "#/$defs/protocolReference" }
+      ]
+    },
+    "correlation": {
+      "type": "object",
+      "required": ["correlation_id", "reference_ids"],
+      "properties": {
+        "correlation_id": { "$ref": "#/$defs/nonEmptyToken" },
+        "reference_ids": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/nonEmptyToken" }
+        }
+      },
+      "additionalProperties": false
+    },
+    "authorityDescriptor": {
+      "description": "Attributes a profile-owned payload scope to source references and/or an envelope-local actor. It is not proof of authentication or delegated write authorization.",
+      "type": "object",
+      "required": ["payload_pointer"],
+      "properties": {
+        "payload_pointer": {
+          "description": "JSON-Pointer-shaped scope into payload; empty string denotes the payload root.",
+          "type": "string",
+          "pattern": "^(?:$|/.*)$"
+        },
+        "actor_ref": { "$ref": "#/$defs/nonEmptyToken" },
+        "source_reference_ids": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/nonEmptyToken" }
+        }
+      },
+      "anyOf": [
+        { "required": ["actor_ref"] },
+        { "required": ["source_reference_ids"] }
+      ],
+      "additionalProperties": false
+    },
+    "provenance": {
+      "type": "object",
+      "required": ["produced_at", "producer_actor_ref", "derived_from_reference_ids"],
+      "properties": {
+        "produced_at": { "type": "string", "format": "date-time" },
+        "producer_actor_ref": { "$ref": "#/$defs/nonEmptyToken" },
+        "derived_from_reference_ids": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/nonEmptyToken" }
+        }
+      },
+      "additionalProperties": false
+    },
+    "capability": {
+      "type": "object",
+      "required": ["id"],
+      "properties": {
+        "id": { "$ref": "#/$defs/nonEmptyToken" },
+        "version": { "$ref": "#/$defs/nonEmptyToken" }
+      },
+      "additionalProperties": false
+    },
+    "capabilityRequirements": {
+      "type": "object",
+      "required": ["required", "optional"],
+      "properties": {
+        "required": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/capability" }
+        },
+        "optional": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/capability" }
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

@@ -55,6 +55,7 @@ Strategic direction: use evidence from this testbed to converge toward a prefera
 - [x] Synthetic AIP intake/Bind replay conflicts and exact-retry semantics
 - [x] Cross-process serialized + atomic file-backed FSM/correlation/replay writes
 - [x] Explicit pre-specification TriHerm protocol thesis and universality/evidence guardrails
+- [x] Minimal TriHerm protocol kernel `0.1.0-experimental` JSON envelope + conformance fixtures/tests, with economic semantics kept profile-owned/deferred
 - [ ] External-system write preconditions/reconciliation semantics
 - [ ] Real ServiceTitan/API adapter
 - [ ] Multi-system authority/provenance test against two live systems
@@ -179,11 +180,11 @@ See `openapi.yaml`, `research/th-interop-19-x402-public-resource-boundary.md`, a
 
 ## Next gate
 
-PR #21 establishes the protocol thesis only; it does not promote any experimental schema to a normative protocol contract. Do **not** migrate `Occurrence` or other candidate concepts into a protocol kernel merely because they appear in the thesis.
+PR #21 establishes the protocol thesis, and the subsequent kernel gate adds only a structural `0.1.0-experimental` envelope. Neither promotes `Occurrence` or other economic candidates into normative protocol semantics merely because they appear in the thesis or can be carried in a profile-owned payload.
 
 The observation vocabulary has now earned stronger evidence: one ServiceTitan-shaped operational model and one real Jobber API model map into it without invented lifecycle, schedule, completion, or customer-acceptance semantics. The next architectural decision is whether that is sufficient for canonical-schema promotion or whether a second live operational source should be required first.
 
-The accidental AIP-origin dependency in shared correlation/inspection has now been removed at the synthetic architecture level, and the synthetic AIP/file writer has bounded replay/concurrency hardening. The next specification-oriented gate is to define a **minimal protocol kernel v0.1-experimental** around identity/reference structure, authority, provenance, versioning/extensions, and capability negotiation without introducing a universal economic FSM. The stronger operational falsifier remains a second live origin using the same separation without invented facets.
+The accidental AIP-origin dependency in shared correlation/inspection has now been removed at the synthetic architecture level, and the synthetic AIP/file writer has bounded replay/concurrency hardening. The minimal **protocol kernel v0.1-experimental** now covers only envelope/profile versioning, envelope-local actors, typed references/correlation, authority attribution, provenance, capabilities/extensions, and profile-owned payload. The next specification-oriented gate is to falsify economic interaction semantics such as intent/requirement, offer, and commitment without assuming they belong to the kernel. The stronger operational falsifier remains a second live origin using the same separation without invented facets.
 
 After that, test another live connectivity path while preserving Jobber as the control condition: either a direct second operational API or an integration substrate such as Agave. The question is whether outsourced connectivity preserves source identity, authority, provenance, occurrence boundaries, and native state well enough that TriHerm does not need to build every adapter directly.
 
