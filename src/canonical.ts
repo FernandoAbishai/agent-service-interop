@@ -9,10 +9,11 @@ import type { FsmSession } from './types.ts';
  */
 export function toCanonicalWorkflow(
   session: FsmSession,
-  // Compatibility default for the historical canonical experiment only.
-  // Current shared inspection obtains workflow_id from the separate correlation layer.
-  workflowId = `wf-${session.session_id}`
+  workflowId: string
 ) {
+  if (!workflowId.startsWith('wf-') || workflowId.length <= 3) {
+    throw new Error('canonical projection requires an explicit interoperability workflow_id');
+  }
   return {
     schema_version: '0.1.0-experimental',
     workflow_id: workflowId,

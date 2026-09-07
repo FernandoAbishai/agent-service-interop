@@ -364,3 +364,36 @@ test('non-AIP operational origin traverses the same correlation and inspection b
     });
   });
 });
+
+test('A2A artifact metadata does not choose a primary job from plural operational references', async () => {
+  const correlations = new MemoryWorkflowCorrelationStore();
+  const correlation = correlations.put({
+    workflow_id: 'wf-multi-job-001',
+    operational_refs: [
+      { system: 'synthetic_native_provider', object_type: 'job', id: 'native-job-001' },
+      { system: 'synthetic_native_provider', object_type: 'job', id: 'native-job-002' }
+    ],
+    protocol_refs: []
+  });
+  const observer: WorkflowFacetObserver = {
+    observe: () => ({})
+  };
+  const source = new CorrelatedWorkflowInspectionSource(correlations, observer);
+
+  await withA2AServer(source, async (baseUrl) => {
+    const client = await a2aClient(baseUrl);
+    const result = await client.sendMessage(workflowRequest(correlation.workflow_id));
+    assert.ok('status' in result);
+    const task = result as Task;
+    assert.equal(task.status.state, TaskState.TASK_STATE_COMPLETED);
+    assert.equal(task.artifacts.length, 1);
+    assert.deepEqual(task.artifacts[0].metadata, { workflow_id: correlation.workflow_id });
+
+    const part = task.artifacts[0].parts[0];
+    assert.equal(part.content?.$case, 'text');
+    if (part.content?.$case !== 'text') throw new Error('expected JSON text artifact');
+    const payload = JSON.parse(part.content.value) as any;
+    assert.deepEqual(payload.references.operational_refs, correlation.operational_refs);
+    assert.deepEqual(payload.facets, {});
+  });
+});

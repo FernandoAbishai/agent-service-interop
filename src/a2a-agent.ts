@@ -122,7 +122,6 @@ export class PlumbingWorkflowAgentExecutor implements AgentExecutor {
       return;
     }
 
-    const operationalJobRef = payload.references.operational_refs.find((ref) => ref.object_type === 'job');
     const artifact: Artifact = {
       artifactId: randomUUID(),
       name: 'service-workflow-observation',
@@ -134,8 +133,7 @@ export class PlumbingWorkflowAgentExecutor implements AgentExecutor {
         mediaType: 'application/json'
       }],
       metadata: {
-        workflow_id: payload.references.workflow_id,
-        ...(operationalJobRef ? { operational_job_id: operationalJobRef.id } : {})
+        workflow_id: payload.references.workflow_id
       },
       extensions: []
     };

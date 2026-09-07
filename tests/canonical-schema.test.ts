@@ -75,7 +75,8 @@ test('runtime canonical projection validates against the experimental canonical 
 
     const session = store.getBySession('37a606b6-86f3-4b6c-8e12-a4db917802ba');
     assert.ok(session);
-    const canonical = toCanonicalWorkflow(session);
+    const canonical = toCanonicalWorkflow(session, 'wf-canonical-schema-runtime-test');
+    assert.notEqual(canonical.workflow_id, `wf-${session.session_id}`);
     const validate = validator();
     assert.equal(validate(canonical), true, JSON.stringify(validate.errors));
   } finally {

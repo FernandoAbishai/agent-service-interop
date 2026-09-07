@@ -185,7 +185,7 @@ test('bind handoff accepts the quote and schedules the FSM job in the synthetic 
     assert.equal(state.binding?.full_name, 'Jane Fixture');
     assert.deepEqual(state.binding?.address, ADDRESS);
 
-    const canonical = toCanonicalWorkflow(state);
+    const canonical = toCanonicalWorkflow(state, 'wf-bind-projection-test');
     assertCanonicalWorkflow(canonical);
     assert.equal(canonical.quote.status, 'accepted');
     assert.equal(canonical.job.status, 'scheduled');

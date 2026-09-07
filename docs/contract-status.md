@@ -29,6 +29,8 @@ External versions are inputs to an experiment, not versions of a repository-loca
 
 The v0.3 `workflow_id` is repository-local/internal correlation. It is not added to AIP as a protocol field, and this repository does not yet define private correlation discovery or entitlement semantics.
 
+Historical canonical projection requires that correlation ID explicitly; there is no current implicit `wf-{aip_session_id}` identity default. The only AIP-derived workflow lookup retained is the narrowly scoped read compatibility path for genuinely pre-correlation state.
+
 ### Historical artifacts
 
 `docs/experiment.md` and `schemas/service-workflow.schema.json` record earlier experimental stages. Later narrowing results may supersede their architectural implications without erasing the original evidence.

@@ -97,6 +97,8 @@ The AIP response is intentionally not extended with a new `workflow_id` protocol
 
 `WorkflowInspection v0.3` is also intentionally narrower than the historical `service-workflow.schema.json`: the historical canonical fixture remains evidence from an earlier experiment, while shared inspection now carries only correlation references and the facets a source actually exposes.
 
+The historical canonical projection helper also requires an explicit `workflow_id`; it no longer derives one from an AIP session as a default. This prevents the historical model from creating a second competing workflow identity beside the correlation layer.
+
 The A2A Task has its own ID and context. It is not the FSM job. A completed read-only A2A Task means the provider-agent interaction completed; it does **not** mean the physical service job completed or that the customer accepted fulfillment.
 
 This distinction is executable in the tests: the A2A Task can be `TASK_STATE_COMPLETED` while the authoritative FSM job remains `scheduled`. The inspection contract no longer invents completion or customer-decision facets when the underlying source does not expose them.
