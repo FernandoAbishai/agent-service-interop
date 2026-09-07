@@ -1,4 +1,5 @@
 import type { AipBindRequest, AipIntakeRequest, ConsentScope, PlumbingIntakeData } from './types.ts';
+import { validateAgainstPinnedAipSchema, type AipRuntimeSchema } from './aip-upstream-validation.ts';
 
 export class ValidationError extends Error {
   readonly code: string;
@@ -32,6 +33,15 @@ function rejectUnknownKeys(value: Record<string, unknown>, allowed: Set<string>,
   }
 }
 
+function assertPinnedAipSchema(schema: AipRuntimeSchema, body: unknown): void {
+  const result = validateAgainstPinnedAipSchema(schema, body);
+  if (result.ok) return;
+  const first = result.errors[0];
+  const location = first?.instancePath || '/';
+  const message = first?.message ?? 'does not match the pinned AIP schema';
+  throw new ValidationError('SCHEMA_MISMATCH', `Pinned AIP ${schema} schema mismatch at ${location}: ${message}`);
+}
+
 function validateScopes(value: unknown, required: ConsentScope): ConsentScope[] {
   if (!Array.isArray(value) || value.length === 0 || !value.every((scope) => typeof scope === 'string' && CONSENT_SCOPES.has(scope as ConsentScope))) {
     throw new ValidationError('INVALID_INPUT', 'agent.consent_scope must contain only valid AIP scopes');
@@ -50,6 +60,7 @@ export function isUuidV4(value: string): boolean {
 }
 
 export function validateIntakeRequest(body: unknown): AipIntakeRequest {
+  assertPinnedAipSchema('intake', body);
   if (!isRecord(body)) throw new ValidationError('INVALID_INPUT', 'Request body must be a JSON object');
   rejectUnknownKeys(body, REQUEST_KEYS, 'request');
 
@@ -87,6 +98,7 @@ export function validateIntakeRequest(body: unknown): AipIntakeRequest {
 }
 
 export function validateBindRequest(body: unknown): AipBindRequest {
+  assertPinnedAipSchema('bind', body);
   if (!isRecord(body)) throw new ValidationError('INVALID_INPUT', 'Bind body must be a JSON object');
   rejectUnknownKeys(body, BIND_KEYS, 'bind request');
   if (typeof body.offer_id !== 'string' || body.offer_id.length === 0) {
@@ -130,4 +142,27 @@ export function assertNoPiiAtIntake(data: PlumbingIntakeData): void {
       throw new ValidationError('SCHEMA_MISMATCH', `PII marker "${marker}" is not allowed at intake`);
     }
   }
+}
+
+export function assertNoPiiInIntakeRequest(request: AipIntakeRequest): void {
+  const piiMarkers = ['full_name', 'email', 'phone', 'street', 'address'];
+
+  function walk(value: unknown, path: string): void {
+    if (Array.isArray(value)) {
+      value.forEach((item, index) => walk(item, `${path}[${index}]`));
+      return;
+    }
+    if (!isRecord(value)) return;
+
+    for (const [key, child] of Object.entries(value)) {
+      const normalized = key.toLowerCase();
+      const marker = piiMarkers.find((candidate) => normalized.includes(candidate));
+      if (marker) {
+        throw new ValidationError('SCHEMA_MISMATCH', `PII-shaped intake field "${path}.${key}" is not allowed before Bind`);
+      }
+      walk(child, `${path}.${key}`);
+    }
+  }
+
+  walk(request.metadata, 'metadata');
 }

@@ -66,11 +66,11 @@ Endpoints:
 - `POST /api/aip/residential-plumbing-quote`
 - `POST /api/aip/bind`
 
-The intended intake schema is privacy-minimized: it requests postal code and non-identifying service constraints before binding, while full name, phone, and street address belong at Bind. The current runtime still needs metadata hardening so that this boundary is enforced beyond `intake_data`.
+The intended intake schema is privacy-minimized: it requests postal code and non-identifying service constraints before binding, while full name, phone, and street address belong at Bind. Runtime intake validation now checks the complete request against the vendored AIP intake schema first, then applies the narrower plumbing-fixture rules and rejects PII-shaped metadata keys before operational state is created.
 
 For this experiment, **Bind is treated as the adapter's handoff point into the provider's operational workflow**. The current synthetic adapter checks the declared Bind scope and continuity of the agent ID, but it does not constitute an external authentication/delegation proof. Bind is not represented as payment, job completion, or a universal booking primitive. The file-backed FSM remains authoritative for quote acceptance and job scheduling.
 
-The committed/generated AIP manifest, intake fixture, offer response, and bind-request fixture used by the conformance suite are checked against vendored upstream JSON Schemas from the pinned 2026-02-27 snapshot. Runtime validator parity with every upstream constraint is a known hardening item. This evidence is not AIP certification or proof of full interoperability.
+The committed/generated AIP manifest, intake fixture, offer response, and bind-request fixture used by the conformance suite are checked against vendored upstream JSON Schemas from the pinned 2026-02-27 snapshot. Runtime intake and Bind requests are also schema-checked against that same pinned snapshot before adapter-local business constraints run. This evidence is not AIP certification or proof of full interoperability.
 
 The bind response remains adapter-local because AIP v0.1.0 defines a bind-request schema but does not define a normative bind-response schema.
 
@@ -122,7 +122,7 @@ The AIP, A2A and x402 processes share two distinct files by default: `.runtime/f
 ## What the tests currently demonstrate
 
 - AIP v0.1.0 upstream-schema validation for manifest/intake/offer/bind-request artifacts;
-- privacy-minimized AIP `intake_data` and Bind-level PII handoff for the tested fixture; runtime metadata hardening remains a known gap;
+- privacy-minimized AIP intake with pinned-schema runtime validation and local rejection of PII-shaped intake metadata before Bind;
 - quote transition `offered -> accepted` and job transition `pending -> scheduled` in the existing-system mock;
 - projection of confirmed FSM state into the experimental canonical representation;
 - official A2A Agent Card discovery and HTTP+JSON client/server interaction;

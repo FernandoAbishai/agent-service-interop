@@ -44,7 +44,7 @@ No production interoperability or protocol-certification claims are made.
 - [x] Deterministic x402 resource tests with no funded wallet or secret
 - [x] Opt-in Circle Gateway live-test harness
 - [x] Explicit contract/version-status document separating upstream, experimental and historical artifacts
-- [ ] Runtime AIP validation parity with every vendored upstream schema constraint
+- [x] Runtime AIP intake/Bind schema gate against the vendored 2026-02-27 contracts before local adapter constraints
 - [x] Protocol-neutral workflow correlation stored separately from the operational FSM
 - [x] AIP session/offer IDs retained as protocol refs rather than shared workflow identity
 - [x] Operational requirement/quote/job IDs retained as operational refs
@@ -70,7 +70,7 @@ No production interoperability or protocol-certification claims are made.
 | Canonical state should be the operational source of truth | Rejected as the current architecture direction |
 | AIP can be projected onto the current synthetic plumbing FSM without replacing it | Supported by executable tests |
 | Bind proves external authorization/delegation | Not supported; current adapter checks declared Bind scope + same agent ID only |
-| AIP fixtures/generated artifacts used by conformance tests match pinned upstream normative schemas | Supported for manifest/intake/offer/bind request examples; runtime validator parity remains open |
+| AIP fixtures/generated artifacts used by conformance tests match pinned upstream normative schemas | Supported for manifest/intake/offer/bind request examples; runtime intake/Bind requests are checked against the same pinned schemas before local constraints |
 | One canonical representation can support two independent agent-facing views | Initial support: AIP + A2A over one synthetic workflow |
 | A2A Task state can remain distinct from physical Job state | Supported by executable test: Task completed while Job remains scheduled |
 | A single `job.scheduled_for` can faithfully represent ServiceTitan-shaped scheduling | Falsified by fixture: one Job has multiple Appointments with independent windows |
@@ -119,7 +119,7 @@ The Jobber work in this stage is read-only. Jobber remains authoritative for its
 
 ### AIP
 
-Pinned to **AIP v0.1.0 / 2026-02-27**. The conformance suite checks the generated manifest and offer plus committed intake/bind-request examples against vendored upstream JSON Schemas from that snapshot. Runtime validator parity with every upstream constraint remains a hardening item. The adapter-local bind response remains outside normative AIP schema coverage.
+Pinned to **AIP v0.1.0 / 2026-02-27**. The conformance suite checks the generated manifest and offer plus committed intake/bind-request examples against vendored upstream JSON Schemas from that snapshot. Runtime intake and Bind requests pass through those pinned schemas before the adapter applies its narrower fixture/business constraints. The adapter-local bind response remains outside normative AIP schema coverage.
 
 ### A2A
 
@@ -174,7 +174,7 @@ Do **not** migrate `Occurrence` into `service-workflow.schema.json` automaticall
 
 The observation vocabulary has now earned stronger evidence: one ServiceTitan-shaped operational model and one real Jobber API model map into it without invented lifecycle, schedule, completion, or customer-acceptance semantics. The next architectural decision is whether that is sufficient for canonical-schema promotion or whether a second live operational source should be required first.
 
-The accidental AIP-origin dependency in shared correlation/inspection has now been removed at the synthetic architecture level. The next stronger falsifier is a second live operational origin using the same correlation/reference separation without invented facets. In parallel, runtime AIP validation, idempotency/replay behavior, provenance, and OpenAPI contract checks should be hardened.
+The accidental AIP-origin dependency in shared correlation/inspection has now been removed at the synthetic architecture level. The next stronger falsifier is a second live operational origin using the same correlation/reference separation without invented facets. In parallel, idempotency/replay behavior, provenance, and OpenAPI contract checks should be hardened.
 
 After that, test another live connectivity path while preserving Jobber as the control condition: either a direct second operational API or an integration substrate such as Agave. The question is whether outsourced connectivity preserves source identity, authority, provenance, occurrence boundaries, and native state well enough that TriHerm does not need to build every adapter directly.
 
