@@ -1,12 +1,18 @@
 # agent-service-interop
 
-A public interoperability experiment between **AI-agent protocols** and **real-world service-business systems**.
+A public interoperability and protocol-design laboratory for **AI agents**, **real-world businesses**, and the operational systems that execute economic activity.
 
-## Research question
+## Strategic objective and research question
 
-> Can one existing service-business workflow be exposed through multiple agent-facing protocols without replacing the operational system the business already uses?
+The long-term objective is to discover and eventually specify a **preferably universal TriHerm protocol for agent-to-business and broader economic coordination**.
 
-This repository starts with a residential plumbing workflow and treats existing protocols and standards as inputs, not competitors to reinvent.
+The immediate research question remains deliberately falsifiable:
+
+> What is the smallest authority-aware coordination kernel that can survive multiple agent protocols and real operational systems without replacing those systems or fabricating missing semantics?
+
+This repository starts with a residential plumbing workflow and treats existing protocols and standards as reusable inputs and falsifiers, not as capabilities to rename or duplicate. "Universal" is a strategic target to earn through independent evidence, not a claim about the current experimental contracts.
+
+See [`docs/protocol-thesis.md`](docs/protocol-thesis.md) for the pre-specification thesis, candidate kernel, invariants, and evidence gates.
 
 ## What this repository is testing
 
@@ -20,7 +26,7 @@ The experiment asks whether a small normalized interoperability layer can sit be
 - an HTTP/OpenAPI inspection surface protected experimentally by x402/Circle Gateway;
 - later MCP and settlement/verification adapters only where a concrete interoperability need survives falsification.
 
-The scope remains deliberately narrow: **one plumbing workflow, AIP + A2A cross-surface inspection, small earned observation vocabularies, read-only real-system evidence, and no workflow replacement**.
+The implementation scope remains deliberately narrow: **one plumbing workflow, AIP + A2A cross-surface inspection, small earned observation vocabularies, read-only real-system evidence, and no workflow replacement**. That narrow scope is the evidence base from which a protocol kernel may be earned rather than assumed.
 
 ```text
 AIP buyer flow --------------------+
@@ -36,13 +42,14 @@ AIP and A2A retain their own protocol identities. They reference the same underl
 
 ## What this repository is not
 
-- Not a new universal commerce protocol.
+- Not yet a stable, normative, or proven-universal TriHerm protocol.
+- Not a universal CRM/ERP/FSM, workflow database, or giant business-object schema.
 - Not a proposed UCP extension.
 - Not a replacement for AIP, UCP, MCP, Agent2Agent, AP2, UBL, ERP, CRM, or field-service systems.
 - Not a claim that quoting, verification, fulfillment, or evidence primitives are novel.
 - Not a production payment or escrow system.
 
-Experimental schemas and adapters in this repository describe **translation boundaries** for falsifiable experiments. They are not standards proposals.
+Experimental schemas and adapters in this repository describe **translation and coordination boundaries** for falsifiable experiments. They are pre-specification evidence, not stable standards proposals.
 
 ## Architecture decision
 
@@ -52,7 +59,7 @@ The current architectural direction is:
 
 Writes are routed as intents/commands through the adapter responsible for the authoritative system. The canonical representation is updated from the confirmed outcome rather than being mutated first and expecting the provider system to catch up later.
 
-This preserves a path from a simple derived projection toward multi-system interoperability without turning this project into another FSM/ERP. It does **not** imply that a canonical database, event bus, workflow engine, conflict-resolution layer, or universal service schema is required.
+This preserves a path from a simple derived projection toward a universal coordination protocol without turning this project into another FSM/ERP. It does **not** imply that a canonical database, event bus, workflow engine, conflict-resolution layer, or universal business-object schema is required.
 
 See [`docs/architecture.md`](docs/architecture.md) for the authority model, invariants, open questions, and falsification conditions.
 
@@ -153,6 +160,7 @@ See:
 - [`crosswalk/protocol-capabilities.md`](crosswalk/protocol-capabilities.md)
 - [`docs/experiment.md`](docs/experiment.md)
 - [`docs/architecture.md`](docs/architecture.md)
+- [`docs/protocol-thesis.md`](docs/protocol-thesis.md)
 - [`docs/contract-status.md`](docs/contract-status.md)
 - [`schemas/service-workflow.schema.json`](schemas/service-workflow.schema.json)
 - [`fixtures/plumbing/workflow.example.json`](fixtures/plumbing/workflow.example.json)
@@ -173,7 +181,7 @@ The repository now has executable evidence that **one AIP-originated synthetic p
 
 The TH-INTEROP-20 synthetic falsifier additionally shows that the shared inspection path no longer structurally requires an AIP-origin workflow: correlation is stored separately from the operational FSM, AIP IDs are protocol refs only, and a provider-native synthetic source can expose only the job facet it actually has. The stronger next falsifier is the same separation against another live operational origin.
 
-The broader deployment thesis is still unproven. It should be revised or narrowed if any of these occur:
+The broader deployment and protocol thesis is still unproven. The universal kernel should be revised or narrowed if any of these occur:
 
 - canonical normalization loses decision-critical business semantics;
 - most useful state proves system-specific and resists a stable normalized core;
@@ -184,7 +192,7 @@ The broader deployment thesis is still unproven. It should be revised or narrowe
 
 ## Status
 
-**Experimental / research.** No protocol standing, no production guarantees, and no interoperability claim beyond checked fixtures and executable tests.
+**Experimental / pre-specification research.** The repository now has an explicit strategic goal of converging toward a TriHerm coordination protocol, but no protocol standing, production guarantee, stability guarantee, or universality claim exists beyond checked fixtures and executable tests.
 
 ## License
 
