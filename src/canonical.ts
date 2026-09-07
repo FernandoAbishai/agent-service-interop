@@ -7,16 +7,22 @@ import type { FsmSession } from './types.ts';
  * This function does not make the canonical object authoritative. The FSM
  * transition has already happened before this projection is produced.
  */
-export function toCanonicalWorkflow(session: FsmSession) {
+export function toCanonicalWorkflow(
+  session: FsmSession,
+  workflowId: string
+) {
+  if (!workflowId.startsWith('wf-') || workflowId.length <= 3) {
+    throw new Error('canonical projection requires an explicit interoperability workflow_id');
+  }
   return {
     schema_version: '0.1.0-experimental',
-    workflow_id: `wf-${session.session_id}`,
+    workflow_id: workflowId,
     provider: {
       provider_id: 'provider_demo_plumbing',
       name: 'Demo Plumbing Co.',
       operational_system: 'file_backed_fsm',
       external_refs: {
-        fsm_session_id: session.session_id
+        aip_session_id: session.session_id
       }
     },
     requirement: {

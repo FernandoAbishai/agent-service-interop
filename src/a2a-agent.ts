@@ -3,15 +3,14 @@ import type { AgentCard, Artifact, Message, Task } from '@a2a-js/sdk';
 import { A2A_PROTOCOL_VERSION, Role, TaskState } from '@a2a-js/sdk';
 import type { AgentExecutor, ExecutionEventBus, RequestContext } from '@a2a-js/sdk/server';
 import { AgentEvent, DefaultRequestHandler, InMemoryTaskStore } from '@a2a-js/sdk/server';
-import { FileFsmStore } from './fsm-store.ts';
-import { projectWorkflowInspection } from './workflow-inspection.ts';
+import { projectWorkflowInspection, type WorkflowInspectionSource } from './workflow-inspection.ts';
 
 export const A2A_AGENT_VERSION = '1.0.0';
 
 export function createPlumbingAgentCard(baseUrl: string): AgentCard {
   return {
     name: 'Demo Plumbing Provider Agent',
-    description: 'Read-only A2A surface over the same synthetic plumbing workflow exposed through AIP.',
+    description: 'Read-only A2A surface over correlated service-workflow state without taking operational authority.',
     supportedInterfaces: [
       {
         url: `${baseUrl}/a2a`,
@@ -39,9 +38,9 @@ export function createPlumbingAgentCard(baseUrl: string): AgentCard {
       {
         id: 'inspect_service_workflow',
         name: 'Inspect Service Workflow',
-        description: 'Inspect an existing plumbing workflow by canonical workflow ID or AIP session ID without mutating operational state.',
+        description: 'Inspect an existing service workflow by protocol-neutral workflow ID without mutating operational state.',
         tags: ['plumbing', 'workflow', 'status', 'read-only'],
-        examples: ['{"workflow_id":"wf-37a606b6-86f3-4b6c-8e12-a4db917802ba"}'],
+        examples: ['{"workflow_id":"wf-correlation-001"}'],
         inputModes: ['application/json', 'text/plain'],
         outputModes: ['application/json'],
         securityRequirements: []
@@ -52,48 +51,34 @@ export function createPlumbingAgentCard(baseUrl: string): AgentCard {
   };
 }
 
-function inputReference(message: Message): { workflowId?: string; sessionId?: string } {
+function inputWorkflowId(message: Message): string | undefined {
   for (const part of message.parts) {
     const content = part.content;
-    if (!content) continue;
-    if (content.$case === 'text') {
-      const text = content.value.trim();
-      if (text.startsWith('wf-')) return { workflowId: text };
-      if (/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(text)) {
-        return { sessionId: text };
-      }
-      try {
-        const parsed = JSON.parse(text) as Record<string, unknown>;
-        return {
-          workflowId: typeof parsed.workflow_id === 'string' ? parsed.workflow_id : undefined,
-          sessionId: typeof parsed.session_id === 'string' ? parsed.session_id : undefined
-        };
-      } catch {
-        // fall through to an empty reference
-      }
+    if (!content || content.$case !== 'text') continue;
+    const text = content.value.trim();
+    if (text.startsWith('wf-')) return text;
+    try {
+      const parsed = JSON.parse(text) as Record<string, unknown>;
+      if (typeof parsed.workflow_id === 'string') return parsed.workflow_id;
+    } catch {
+      // fall through to the next part
     }
   }
-  return {};
-}
-
-function workflowIdFromReference(reference: { workflowId?: string; sessionId?: string }): string | undefined {
-  if (reference.workflowId) return reference.workflowId;
-  if (reference.sessionId) return `wf-${reference.sessionId}`;
   return undefined;
 }
 
 export class PlumbingWorkflowAgentExecutor implements AgentExecutor {
-  private readonly store: FileFsmStore;
+  private readonly source: WorkflowInspectionSource;
 
-  constructor(store: FileFsmStore) {
-    this.store = store;
+  constructor(source: WorkflowInspectionSource) {
+    this.source = source;
   }
 
   async execute(context: RequestContext, eventBus: ExecutionEventBus): Promise<void> {
     const taskId = context.taskId;
     const contextId = context.contextId;
-    const workflowId = workflowIdFromReference(inputReference(context.userMessage));
-    const payload = workflowId ? projectWorkflowInspection(this.store, workflowId) : undefined;
+    const workflowId = inputWorkflowId(context.userMessage);
+    const payload = workflowId ? projectWorkflowInspection(this.source, workflowId) : undefined;
 
     const initialTask: Task = context.task ?? {
       id: taskId,
@@ -120,7 +105,7 @@ export class PlumbingWorkflowAgentExecutor implements AgentExecutor {
             role: Role.ROLE_AGENT,
             messageId: randomUUID(),
             parts: [{
-              content: { $case: 'text', value: 'Workflow not found. Provide workflow_id or session_id for an existing AIP-created workflow.' },
+              content: { $case: 'text', value: 'Workflow not found. Provide workflow_id for an existing correlated workflow.' },
               metadata: undefined,
               filename: '',
               mediaType: 'text/plain'
@@ -148,8 +133,7 @@ export class PlumbingWorkflowAgentExecutor implements AgentExecutor {
         mediaType: 'application/json'
       }],
       metadata: {
-        canonical_workflow_id: payload.references.canonical_workflow_id,
-        operational_job_id: payload.references.operational_job_id
+        workflow_id: payload.references.workflow_id
       },
       extensions: []
     };
@@ -182,10 +166,10 @@ export class PlumbingWorkflowAgentExecutor implements AgentExecutor {
   }
 }
 
-export function createA2ARequestHandler(baseUrl: string, store: FileFsmStore) {
+export function createA2ARequestHandler(baseUrl: string, source: WorkflowInspectionSource) {
   return new DefaultRequestHandler(
     createPlumbingAgentCard(baseUrl),
     new InMemoryTaskStore(),
-    new PlumbingWorkflowAgentExecutor(store)
+    new PlumbingWorkflowAgentExecutor(source)
   );
 }

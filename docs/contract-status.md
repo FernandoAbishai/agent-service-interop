@@ -22,10 +22,14 @@ External versions are inputs to an experiment, not versions of a repository-loca
 | Artifact | Version/status | Meaning |
 |---|---|---|
 | `schemas/service-workflow.schema.json` | `0.1.0-experimental` | Historical executable translation model; not the minimal interoperability core |
-| `openapi.yaml` | `0.2.0-experimental` | Description of experimental read-only inspection surfaces; not a production deployment contract |
+| `openapi.yaml` | `0.3.0-experimental` | Description of experimental read-only inspection surfaces; v0.3 separates correlation refs from optional source-backed facets |
 | `ServiceRequestObservation` | earned observation-layer vocabulary | Narrow AIP/UBL service-request facet; not canonical protocol state |
 | `OccurrenceObservation` | earned observation-layer vocabulary | Cross-system Appointment/Visit observation used by ServiceTitan-shaped and Jobber mappings; no normalized lifecycle |
-| `WorkflowInspection` | experimental shared projection | Current A2A/HTTP/x402 inspection payload; still derived from the AIP-originated synthetic FSM path |
+| `WorkflowInspection` | `0.3.0-experimental` shared projection | Requires protocol-neutral correlation refs; source-backed quote/job facets are optional and no AIP origin is required |
+
+The v0.3 `workflow_id` is repository-local/internal correlation. It is not added to AIP as a protocol field, and this repository does not yet define private correlation discovery or entitlement semantics.
+
+Historical canonical projection requires that correlation ID explicitly; there is no current implicit `wf-{aip_session_id}` identity default. The only AIP-derived workflow lookup retained is the narrowly scoped read compatibility path for genuinely pre-correlation state.
 
 ### Historical artifacts
 
@@ -45,7 +49,7 @@ Before a repository-local contract is described as stable or normative, the proj
 
 ## Known contract gaps from the 2026-09-06 audit
 
-- `WorkflowInspection` is still AIP-origin coupled: its workflow identity is derived from the AIP session and it requires an AIP offer reference.
+- Protocol-neutral correlation has only synthetic evidence so far; a second live operational origin remains untested.
 - Runtime AIP validation is not yet proven equivalent to every constraint in the vendored upstream schemas.
 - The manifest declares session-scoped retention, but the file-backed research store does not yet implement expiry/deletion semantics; do not interpret that declaration as a production retention guarantee.
 - The canonical JSON Schema now has fixture/runtime projection tests; the OpenAPI description still lacks dedicated runtime contract validation.

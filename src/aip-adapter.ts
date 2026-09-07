@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import type { FsmSession } from './types.ts';
 import { FileFsmStore } from './fsm-store.ts';
+import type { WorkflowCorrelationStore } from './workflow-correlation.ts';
 import { assertNoPiiAtIntake, validateBindRequest, validateIntakeRequest, ValidationError } from './validation.ts';
 
 export const AIP_VERSION = '0.1.0';
@@ -8,19 +9,23 @@ export const AIP_SNAPSHOT = '2026-02-27';
 
 export type AdapterOptions = {
   store: FileFsmStore;
+  correlations?: WorkflowCorrelationStore;
   now?: () => Date;
   idFactory?: () => string;
+  workflowIdFactory?: () => string;
 };
 
 export class PlumbingAipAdapter {
   private readonly options: AdapterOptions;
   private readonly now: () => Date;
   private readonly idFactory: () => string;
+  private readonly workflowIdFactory: () => string;
 
   constructor(options: AdapterOptions) {
     this.options = options;
     this.now = options.now ?? (() => new Date());
     this.idFactory = options.idFactory ?? randomUUID;
+    this.workflowIdFactory = options.workflowIdFactory ?? randomUUID;
   }
 
   manifest(baseUrl: string) {
@@ -79,6 +84,24 @@ export class PlumbingAipAdapter {
 
     if (existing && existing.agent_id !== request.agent.id) {
       throw new ValidationError('INVALID_INPUT', 'session_id is already associated with a different agent');
+    }
+
+    if (this.options.correlations) {
+      const existingCorrelation = this.options.correlations.findByProtocolRef('AIP', 'session', request.session_id);
+      if (!existingCorrelation) {
+        this.options.correlations.put({
+          workflow_id: `wf-${this.workflowIdFactory()}`,
+          operational_refs: [
+            { system: 'file_backed_fsm', object_type: 'requirement', id: session.requirement.requirement_id },
+            { system: 'file_backed_fsm', object_type: 'quote', id: session.quote.quote_id },
+            { system: 'file_backed_fsm', object_type: 'job', id: session.job.job_id }
+          ],
+          protocol_refs: [
+            { protocol: 'AIP', object_type: 'session', id: session.session_id },
+            { protocol: 'AIP', object_type: 'offer', id: session.quote.offer_id }
+          ]
+        });
+      }
     }
 
     return this.toOfferResponse(session, baseUrl);
