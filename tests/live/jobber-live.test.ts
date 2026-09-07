@@ -1,8 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { DEFAULT_JOBBER_GRAPHQL_VERSION } from '../src/jobber-graphql.ts';
-import { observeJobberJobVisits } from '../src/jobber-observation.ts';
-import { jobberVisitToOccurrence } from '../src/jobber-occurrence.ts';
+import { DEFAULT_JOBBER_GRAPHQL_VERSION } from '../../src/jobber-graphql.ts';
+import { observeJobberJobVisits } from '../../src/jobber-observation.ts';
+import { jobberVisitToOccurrence } from '../../src/jobber-occurrence.ts';
 
 const enabled = process.env.JOBBER_LIVE === '1';
 

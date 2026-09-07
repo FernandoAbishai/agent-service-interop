@@ -1,4 +1,6 @@
-# Tier 1 experiment design
+# Tier 1 experiment design (historical baseline)
+
+_Status: original Tier 1 design retained as historical experiment context. It is not the current implementation inventory. A2A was subsequently selected and implemented as the second agent-facing surface, and later experiments added Jobber observation plus HTTP/OpenAPI/x402 inspection boundaries. See `STATUS.md` for the current claim ledger._
 
 ## Question
 

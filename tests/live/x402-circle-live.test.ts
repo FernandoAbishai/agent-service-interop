@@ -6,10 +6,10 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { GatewayClient } from '@circle-fin/x402-batching/client';
-import { FileFsmStore } from '../src/fsm-store.ts';
-import { PlumbingAipAdapter } from '../src/aip-adapter.ts';
-import { toCanonicalWorkflow } from '../src/canonical.ts';
-import { createCircleGatewayPaymentGate, createPaidInspectionApp, DEFAULT_X402_INSPECTION_PRICE } from '../src/x402-server.ts';
+import { FileFsmStore } from '../../src/fsm-store.ts';
+import { PlumbingAipAdapter } from '../../src/aip-adapter.ts';
+import { toCanonicalWorkflow } from '../../src/canonical.ts';
+import { createCircleGatewayPaymentGate, createPaidInspectionApp, DEFAULT_X402_INSPECTION_PRICE } from '../../src/x402-server.ts';
 
 const LIVE = process.env.CIRCLE_GATEWAY_LIVE === '1';
 

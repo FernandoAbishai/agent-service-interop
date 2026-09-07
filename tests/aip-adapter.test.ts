@@ -147,7 +147,7 @@ test('intake rejects PII-shaped extra fields instead of silently accepting them'
   });
 });
 
-test('bind is the authorized handoff that accepts the quote and schedules the FSM job', async () => {
+test('bind handoff accepts the quote and schedules the FSM job in the synthetic adapter', async () => {
   await withServer(async ({ baseUrl, store }) => {
     const offerResponse = await post(baseUrl, '/api/aip/residential-plumbing-quote', intake());
     const offer = (await offerResponse.json() as any).offer;

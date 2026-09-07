@@ -1,0 +1,55 @@
+# Contract status and version boundaries
+
+This repository is an interoperability research testbed with executable reference adapters. It does **not** currently publish a TriHerm protocol or claim that its experimental schemas are stable normative standards.
+
+## Contract classes
+
+### Upstream normative inputs
+
+These contracts come from external protocols or APIs and are version-pinned where the experiment depends on them:
+
+| Input | Pinned version in this repository | Evidence boundary |
+|---|---|---|
+| Agent Intake Protocol | `0.1.0`, snapshot `2026-02-27` | Vendored manifest/intake/offer/bind-request JSON Schemas |
+| A2A Protocol | `1.0` | Official JS SDK `@a2a-js/sdk@1.0.1`; HTTP+JSON surface |
+| Jobber GraphQL | `2025-04-16` | Read-only Job/Visit query plus deterministic and opt-in live tests |
+| x402/Circle adapter dependencies | `@x402/core@2.21.0`, `@x402/evm@2.20.0`, `@circle-fin/x402-batching@3.2.0` | Fixed public synthetic inspection resource only |
+
+External versions are inputs to an experiment, not versions of a repository-local protocol.
+
+### Repository-local experimental contracts
+
+| Artifact | Version/status | Meaning |
+|---|---|---|
+| `schemas/service-workflow.schema.json` | `0.1.0-experimental` | Historical executable translation model; not the minimal interoperability core |
+| `openapi.yaml` | `0.2.0-experimental` | Description of experimental read-only inspection surfaces; not a production deployment contract |
+| `ServiceRequestObservation` | earned observation-layer vocabulary | Narrow AIP/UBL service-request facet; not canonical protocol state |
+| `OccurrenceObservation` | earned observation-layer vocabulary | Cross-system Appointment/Visit observation used by ServiceTitan-shaped and Jobber mappings; no normalized lifecycle |
+| `WorkflowInspection` | experimental shared projection | Current A2A/HTTP/x402 inspection payload; still derived from the AIP-originated synthetic FSM path |
+
+### Historical artifacts
+
+`docs/experiment.md` and `schemas/service-workflow.schema.json` record earlier experimental stages. Later narrowing results may supersede their architectural implications without erasing the original evidence.
+
+## Compatibility policy today
+
+There is no stable backward-compatibility guarantee for repository-local experimental contracts yet. Any incompatible change must:
+
+1. identify which experimental contract changes;
+2. update its explicit version or document why the change is non-contractual;
+3. update fixtures and executable tests together;
+4. preserve source/protocol IDs as references rather than silently reinterpreting them;
+5. avoid presenting an experimental change as a new protocol standard.
+
+Before a repository-local contract is described as stable or normative, the project should have at minimum a conformance suite, an explicit compatibility/versioning policy, and evidence from independent implementations or operational origins.
+
+## Known contract gaps from the 2026-09-06 audit
+
+- `WorkflowInspection` is still AIP-origin coupled: its workflow identity is derived from the AIP session and it requires an AIP offer reference.
+- Runtime AIP validation is not yet proven equivalent to every constraint in the vendored upstream schemas.
+- The manifest declares session-scoped retention, but the file-backed research store does not yet implement expiry/deletion semantics; do not interpret that declaration as a production retention guarantee.
+- The canonical JSON Schema now has fixture/runtime projection tests; the OpenAPI description still lacks dedicated runtime contract validation.
+- The UBL RFQ fixture is a semantic falsifier shape, not a claim of XML/schema conformance to a specific UBL release.
+- Write-side replay, idempotency, precondition and conflict semantics are not yet a stable contract.
+
+These are next-gate items, not permission to enlarge the normalized core.
