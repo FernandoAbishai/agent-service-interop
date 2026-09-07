@@ -27,6 +27,7 @@ External versions are inputs to an experiment, not versions of a repository-loca
 | `ServiceRequestObservation` | earned observation-layer vocabulary | Narrow AIP/UBL service-request facet; not canonical protocol state |
 | `OfferResponseObservation` | earned observation-layer vocabulary | TH-INTEROP-23 thin AIP Offer / UBL Quotation response relation; excludes normalized money, lifecycle, and commitment semantics |
 | `OccurrenceObservation` | earned observation-layer vocabulary | Cross-system Appointment/Visit observation used by ServiceTitan-shaped and Jobber mappings; no normalized lifecycle |
+| TH-INTEROP-24 exact-value representation | research `NORMALIZED_CANDIDATE` | Lossless scaled-integer magnitude normalization with explicit asset identity/source representation; cross-basis exact-quantity equivalence remains unearned without grounded scale metadata; not a public `Money` contract, kernel field, rich Quote schema, asset registry, or settlement model |
 | `WorkflowInspection` | `0.3.0-experimental` shared projection | Requires protocol-neutral correlation refs; source-backed quote/job facets are optional and no AIP origin is required |
 
 The v0.3 `workflow_id` is repository-local/internal correlation. It is not added to AIP as a protocol field, and this repository does not yet define private correlation discovery or entitlement semantics.
@@ -65,4 +66,4 @@ Before a repository-local contract is described as stable, normative, or univers
 - The UBL Quotation/Order fixtures are parsed semantic falsifier shapes pinned conceptually to UBL 2.4; they are not XML/schema conformance evidence. TH-INTEROP-23 deliberately leaves rich quote money/terms and generic Commitment unnormalized.
 - Synthetic AIP intake/Bind replay now has explicit exact-retry and `409 IDEMPOTENCY_CONFLICT` behavior, but external-system write preconditions, reconciliation, and distributed exactly-once semantics remain open.
 
-These are next-gate items, not permission to enlarge the normalized core.
+These are open gaps, not repository-wide sequencing instructions or permission to enlarge the normalized core. Current execution order is defined only by `STATUS.md`.

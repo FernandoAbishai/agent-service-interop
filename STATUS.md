@@ -4,7 +4,7 @@ _Last updated: 2026-09-07_
 
 ## Current stage
 
-**Experimental interoperability + pre-specification protocol-design testbed through TH-INTEROP-23 economic-boundary falsification**
+**Experimental interoperability + pre-specification protocol-design testbed through TH-INTEROP-24 exact-money representation falsification**
 
 Strategic direction: use evidence from this testbed to converge toward a preferably universal, authority-aware TriHerm protocol for agent-to-business/economic coordination. No production interoperability, protocol-certification, stability, or universality claims are made today.
 
@@ -56,6 +56,7 @@ Strategic direction: use evidence from this testbed to converge toward a prefera
 - [x] Cross-process serialized + atomic file-backed FSM/correlation/replay writes
 - [x] Explicit pre-specification TriHerm protocol thesis and universality/evidence guardrails
 - [x] Minimal TriHerm protocol kernel `0.1.0-experimental` JSON envelope + conformance fixtures/tests, with economic semantics kept profile-owned/deferred
+- [x] Exact-money representation falsifier across decimal-major, ISO minor-unit, and token atomic-unit source shapes without kernel/schema promotion
 - [ ] External-system write preconditions/reconciliation semantics
 - [ ] Real ServiceTitan/API adapter
 - [ ] Multi-system authority/provenance test against two live systems
@@ -184,10 +185,10 @@ This section is the repository-wide sequencing source of truth. `Next gate` / `N
 
 PR #21 established the protocol thesis, PR #23 added only a structural `0.1.0-experimental` kernel, and PR #24/TH-INTEROP-23 falsified the first post-kernel economic boundary. The current evidence earns `ServiceRequestObservation`, `OccurrenceObservation`, and a thin `OfferResponseObservation` only at the observation layer. Rich Quote remains a candidate; Commitment remains deferred.
 
-The next **specification-track** gate is the exact-money representation falsifier. It must compare exact, auditable representations without changing the kernel, promoting a public Money primitive, or treating the historical numeric plumbing quote as canonical.
+TH-INTEROP-24 now demonstrates a research-only exact-value representation candidate: explicit asset identity plus an arbitrary-precision signed integer coefficient and explicit base-10 scale, with the original source representation retained for audit. This does **not** promote a public `Money` primitive, migrate the historical numeric plumbing quote, define rounding/FX policy, or establish fiat/token equivalence.
 
-After the money representation gate, test `OfferResponseObservation` against an authoritative operational quote/estimate source. Prefer a source that also advances the separate **operational-evidence track** by providing a second live authority or otherwise independent operational origin. Money and terms may remain source-native/unmapped until that experiment proves a safe richer mapping.
+The next gate is now to test `OfferResponseObservation` plus the exact-value representation candidate against an **authoritative operational quote/estimate source**. Prefer a source that also advances the separate operational-evidence track by providing a second live authority or otherwise independent operational origin. Rich quote terms, lifecycle, taxes, line-item semantics, and authority remain unearned until that mapping survives.
 
-Occurrence canonical-schema promotion, a second live connectivity path, OpenAPI runtime validation, external write/reconciliation semantics, authorization/delegation, completion/evidence, and settlement remain separate open tracks. They are important, but none is a prerequisite for the bounded exact-money representation study.
+Occurrence canonical-schema promotion, a second live connectivity path, OpenAPI runtime validation, external write/reconciliation semantics, authorization/delegation, completion/evidence, and settlement remain separate open tracks. They are important, but they do not override the authoritative operational quote/estimate gate above.
 
 No public stable namespace or normative TriHerm capability should be frozen merely from the thesis. Candidate protocol semantics must continue to survive implementation and falsification before they are promoted into a versioned contract.
