@@ -80,6 +80,8 @@ AIP Bind
 
 AIP Bind is therefore not treated as a universal synonym for booking, payment, scheduling, or execution. In the current synthetic adapter, declared consent scope and agent-ID continuity are validation inputs; they are not proof of an external authentication or delegation authority.
 
+For the file-backed experiment, write retries are also adapter concerns rather than new protocol semantics. Intake semantic replay identity is limited to the fields that create persisted operational state; Bind replay identity includes the complete validated `bind_data`. Exact retries do not create a second mutation, while conflicting replay returns 409. An adapter-local replay registry preserves this decision across a correlation-first/operational-write failure without placing replay fingerprints into the correlation contract or operational authority model. This remains local crash/replay hardening, not a distributed transaction guarantee.
+
 ## Authority is domain-specific
 
 There may be no single authoritative system for an entire economic workflow. Authority can differ by domain or field.

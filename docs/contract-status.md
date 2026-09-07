@@ -54,6 +54,6 @@ Before a repository-local contract is described as stable or normative, the proj
 - The manifest declares session-scoped retention, but the file-backed research store does not yet implement expiry/deletion semantics; do not interpret that declaration as a production retention guarantee.
 - The canonical JSON Schema now has fixture/runtime projection tests; the OpenAPI description still lacks dedicated runtime contract validation.
 - The UBL RFQ fixture is a semantic falsifier shape, not a claim of XML/schema conformance to a specific UBL release.
-- Write-side replay, idempotency, precondition and conflict semantics are not yet a stable contract.
+- Synthetic AIP intake/Bind replay now has explicit exact-retry and `409 IDEMPOTENCY_CONFLICT` behavior, but external-system write preconditions, reconciliation, and distributed exactly-once semantics remain open.
 
 These are next-gate items, not permission to enlarge the normalized core.

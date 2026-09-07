@@ -2,6 +2,7 @@ import { createServer, type IncomingMessage, type ServerResponse } from 'node:ht
 import { resolve } from 'node:path';
 import { FileFsmStore } from './fsm-store.ts';
 import { FileWorkflowCorrelationStore } from './workflow-correlation.ts';
+import { FileAipReplayStore } from './aip-replay-store.ts';
 import { PlumbingAipAdapter, AIP_VERSION } from './aip-adapter.ts';
 import { ValidationError } from './validation.ts';
 
@@ -88,13 +89,16 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   const port = Number(process.env.PORT ?? 3000);
   const statePath = resolve(process.env.FSM_STATE_PATH ?? '.runtime/fsm-state.json');
   const correlationPath = resolve(process.env.WORKFLOW_CORRELATION_PATH ?? '.runtime/workflow-correlations.json');
+  const replayPath = resolve(process.env.AIP_REPLAY_PATH ?? '.runtime/aip-replay.json');
   const store = new FileFsmStore(statePath);
   const correlations = new FileWorkflowCorrelationStore(correlationPath);
-  const adapter = new PlumbingAipAdapter({ store, correlations });
+  const replays = new FileAipReplayStore(replayPath);
+  const adapter = new PlumbingAipAdapter({ store, correlations, replays });
   const server = createAipServer(adapter);
   server.listen(port, '127.0.0.1', () => {
     console.log(`agent-service-interop AIP adapter listening on http://127.0.0.1:${port}`);
     console.log(`file-backed FSM state: ${statePath}`);
     console.log(`interop correlation state: ${correlationPath}`);
+    console.log(`AIP replay state: ${replayPath}`);
   });
 }

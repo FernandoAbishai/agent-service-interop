@@ -52,7 +52,9 @@ No production interoperability or protocol-certification claims are made.
 - [x] `WorkflowInspection v0.3` reduced to references plus source-backed optional facets
 - [x] Canonical fixture/runtime projection validation against `service-workflow.schema.json`
 - [ ] OpenAPI contract/runtime validation
-- [ ] Write-side idempotency/replay/precondition semantics
+- [x] Synthetic AIP intake/Bind replay conflicts and exact-retry semantics
+- [x] Cross-process serialized + atomic file-backed FSM/correlation/replay writes
+- [ ] External-system write preconditions/reconciliation semantics
 - [ ] Real ServiceTitan/API adapter
 - [ ] Multi-system authority/provenance test against two live systems
 - [ ] Completion/evidence interoperability tests
@@ -84,6 +86,9 @@ No production interoperability or protocol-certification claims are made.
 | `accepted_as`, `offered_via`, and `converted_from` are stable canonical relationships | Not yet supported as a package; documented as candidates/deferred semantics only |
 | One useful normalized core can survive multiple operational systems | Supported at the observation layer by ServiceTitan-shaped Appointment and live Jobber Visit mappings; canonical-schema promotion remains withheld |
 | Existing real business workflows can remain authoritative while becoming agent-accessible | Supported for the current read-only Jobber path; production mutation authority remains untested |
+| Reusing one AIP session with changed state-affecting intake may silently return the old offer | Rejected; synthetic adapter now returns `409 IDEMPOTENCY_CONFLICT` and preserves the original state |
+| Replaying a successful Bind may reschedule/overwrite the synthetic job | Rejected; exact replay returns the first persisted result and changed Bind returns 409 |
+| Local file-backed writers can safely race without serialization | Rejected; file-backed mutation paths are now cross-process serialized and atomically replaced |
 | Shared workflow correlation can be independent from AIP identity | Initial support: correlation is interop-owned, AIP refs are protocol-specific, and a synthetic non-AIP origin traverses the same inspection path; second live origin remains untested |
 | `WorkflowInspection` requires quote/completion/customer-decision semantics for every source | Rejected; v0.3 keeps facets optional and source-backed |
 | x402 payment for the public inspection resource equals payment/authorization for plumbing work | Rejected; payment is scoped to the digital inspection resource only |
@@ -174,7 +179,7 @@ Do **not** migrate `Occurrence` into `service-workflow.schema.json` automaticall
 
 The observation vocabulary has now earned stronger evidence: one ServiceTitan-shaped operational model and one real Jobber API model map into it without invented lifecycle, schedule, completion, or customer-acceptance semantics. The next architectural decision is whether that is sufficient for canonical-schema promotion or whether a second live operational source should be required first.
 
-The accidental AIP-origin dependency in shared correlation/inspection has now been removed at the synthetic architecture level. The next stronger falsifier is a second live operational origin using the same correlation/reference separation without invented facets. In parallel, idempotency/replay behavior, provenance, and OpenAPI contract checks should be hardened.
+The accidental AIP-origin dependency in shared correlation/inspection has now been removed at the synthetic architecture level, and the synthetic AIP/file writer has bounded replay/concurrency hardening. The next stronger falsifier is a second live operational origin using the same correlation/reference separation without invented facets. In parallel, provenance, OpenAPI contract checks, and real external-write preconditions/reconciliation should be hardened.
 
 After that, test another live connectivity path while preserving Jobber as the control condition: either a direct second operational API or an integration substrate such as Agave. The question is whether outsourced connectivity preserves source identity, authority, provenance, occurrence boundaries, and native state well enough that TriHerm does not need to build every adapter directly.
 

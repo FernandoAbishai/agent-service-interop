@@ -115,7 +115,9 @@ npm run start:a2a  # A2A server, default port 3001
 npm run start:x402 # fixed public synthetic x402 inspection, default port 3002
 ```
 
-The AIP, A2A and x402 processes share two distinct files by default: `.runtime/fsm-state.json` for the synthetic operational FSM and `.runtime/workflow-correlations.json` for interoperability correlation/reference data. Keeping these separate is deliberate: correlation does not take authority over the operational record.
+The AIP, A2A and x402 processes share `.runtime/fsm-state.json` for the synthetic operational FSM and `.runtime/workflow-correlations.json` for interoperability correlation/reference data. The AIP writer additionally uses `.runtime/aip-replay.json` for an adapter-local replay registry containing opaque request fingerprints plus reserved references/IDs. Keeping these concerns separate is deliberate: neither correlation nor replay bookkeeping becomes operational authority or customer identity.
+
+The synthetic file stores now serialize cross-process read/modify/write sections and replace JSON atomically. AIP intake retries are keyed to the state-affecting request (`aip_version`, `session_id`, `agent.id`, and validated `intake_data`); changed semantic input under the same session returns `409 IDEMPOTENCY_CONFLICT`. Bind retries fingerprint the offer/session/agent plus complete validated `bind_data`: an exact retry returns the first result without rescheduling, while changed bind data returns 409. Scheduling policy itself is unchanged in this gate. See [`research/th-interop-21-replay-write-safety.md`](research/th-interop-21-replay-write-safety.md).
 
 `npm test` is deterministic and does not invoke live external systems. The opt-in Jobber and Circle Gateway checks remain separate as `npm run test:jobber-live` and `npm run test:circle-live`.
 
@@ -123,6 +125,9 @@ The AIP, A2A and x402 processes share two distinct files by default: `.runtime/f
 
 - AIP v0.1.0 upstream-schema validation for manifest/intake/offer/bind-request artifacts;
 - privacy-minimized AIP intake with pinned-schema runtime validation and local rejection of PII-shaped intake metadata before Bind;
+- exact intake/Bind replay without second mutation, plus `409 IDEMPOTENCY_CONFLICT` for changed state-affecting replay payloads;
+- cross-process serialized + atomic file replacement for FSM/correlation/replay state, including reader-during-write coverage;
+- fail-closed recovery when correlation is reserved before an operational write: exact replay can finish the write while changed intake cannot claim the reservation;
 - quote transition `offered -> accepted` and job transition `pending -> scheduled` in the existing-system mock;
 - projection of confirmed FSM state into the experimental canonical representation;
 - official A2A Agent Card discovery and HTTP+JSON client/server interaction;
@@ -138,7 +143,7 @@ The AIP, A2A and x402 processes share two distinct files by default: `.runtime/f
 - ServiceTitan-shaped Appointment and real Jobber Visit evidence for the narrow `OccurrenceObservation` vocabulary;
 - a fixed public synthetic HTTP inspection resource protected by deterministic x402 gating, plus an opt-in Circle Gateway live harness.
 
-These results include a real **read-only Jobber API observation path** and an initial synthetic falsifier for protocol-neutral correlation. They do not yet demonstrate safe production writes, a second live operational origin, global workflow identity, or cross-party identity resolution.
+These results include a real **read-only Jobber API observation path**, an initial synthetic falsifier for protocol-neutral correlation, and bounded local replay/file-write hardening. They do not yet demonstrate safe production writes to an external operational system, distributed exactly-once execution, a second live operational origin, global workflow identity, or cross-party identity resolution.
 
 ## Evidence backbone
 
