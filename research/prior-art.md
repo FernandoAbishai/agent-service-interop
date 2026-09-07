@@ -10,7 +10,7 @@ The project now has an explicit strategic objective to pursue a preferably unive
 |---|---|---|---|
 | Agent Intake Protocol (AIP) v0.1.0 | Agent-facing discovery, structured intake, offer/review/bind lifecycle | Discovery/intake/offer semantics and manifest shape | Does not by itself prove integration with a real field-service operating system |
 | Universal Commerce Protocol (UCP) v2026-08-25 | Commerce services/capabilities including shopping checkout and order, payment handlers, discovery profile | Commerce vocabulary and compatible surfaces where semantically appropriate | Capability-specific checkout/order semantics do not prove a generic cross-vertical Commitment lifecycle |
-| OASIS UBL 2.5 CS01; TH-INTEROP-23 pinned to 2.4 | Mature procurement documents including RFQ, Quotation, Order and Order Response | Quotation and ordering semantics, procurement prior art | 2.5 supersedes 2.4 as the newer work product, but the experiment remains explicitly 2.4-shaped; Ordering obligation semantics must not be conflated with AIP Bind, booking, payment, or provider work authorization |
+| OASIS UBL 2.5 OASIS Standard; TH-INTEROP-23 pinned to 2.4 | Mature procurement documents including RFQ, Quotation, Order and Order Response | Quotation and ordering semantics, procurement prior art | 2.5 supersedes 2.4 as the newer work product, but the experiment remains explicitly 2.4-shaped; Ordering obligation semantics must not be conflated with AIP Bind, booking, payment, or provider work authorization |
 | MCP 2026-07-28 + Tasks extension | Tool/resource protocol; extension-based durable/asynchronous operations | Tool execution and async-operation mechanics | Tasks moved from the 2025-11-25 experimental core into `io.modelcontextprotocol/tasks`; neither location defines satisfactory physical-service completion |
 | Agent2Agent (A2A) 1.0.0 | Agent-to-agent communication and Agent Cards | Future cross-agent surface | Not the same protocol as ACP; this project should avoid conflating transport/governance with service-commerce semantics |
 | AP2 | Delegated payment/authorization patterns | Future authorization/settlement adapter concepts | Not the operational system where service work is executed |
@@ -59,7 +59,7 @@ Do not encode a timeless rule from one UCP release. Record the exact UCP version
 
 ### Versioned UBL/MCP behavior
 
-Do not silently upgrade historical falsifier evidence. TH-INTEROP-23 remains pinned to UBL 2.4 even though OASIS now publishes UBL 2.5 Committee Specification 01 as the newer work product. Likewise, MCP Tasks should now be discussed as the 2026-07-28 `io.modelcontextprotocol/tasks` extension rather than the older 2025-11-25 experimental-core API.
+Do not silently upgrade historical falsifier evidence. TH-INTEROP-23 remains pinned to UBL 2.4 even though OASIS published UBL 2.5 as an OASIS Standard on 2026-08-12. Likewise, MCP Tasks should now be discussed as the 2026-07-28 `io.modelcontextprotocol/tasks` extension rather than the older 2025-11-25 experimental-core API.
 
 ## Current working hypothesis
 

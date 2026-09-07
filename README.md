@@ -18,6 +18,8 @@ The first executable kernel contract is [`schemas/triherm-kernel-envelope.schema
 
 The first post-kernel economic falsifier is [`research/th-interop-23-economic-interaction-boundary.md`](research/th-interop-23-economic-interaction-boundary.md): it earns only a thin `OfferResponseObservation` across AIP/UBL while explicitly leaving rich quote money/terms and generic Commitment unnormalized.
 
+The TH-INTEROP-24 representation gate, [`research/th-interop-24-exact-money-boundary.md`](research/th-interop-24-exact-money-boundary.md), tests lossless monetary-magnitude normalization across decimal-major, ISO minor-unit, and token atomic-unit source shapes while refusing ungrounded cross-basis equivalence. Its result is deliberately a research representation candidate rather than a public `Money` primitive or rich Quote profile. Current execution order remains defined only by `STATUS.md`.
+
 ## What this repository is testing
 
 The experiment asks whether a small normalized interoperability layer can sit between:
