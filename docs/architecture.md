@@ -56,13 +56,13 @@ In this experiment:
 
 ```text
 AIP Bind
-   -> adapter command / authorized handoff
+   -> adapter command / experimental handoff point
    -> file-backed FSM
    -> quote accepted + job scheduled
    -> canonical projection of the confirmed FSM state
 ```
 
-AIP Bind is therefore not treated as a universal synonym for booking, payment, scheduling, or execution.
+AIP Bind is therefore not treated as a universal synonym for booking, payment, scheduling, or execution. In the current synthetic adapter, declared consent scope and agent-ID continuity are validation inputs; they are not proof of an external authentication or delegation authority.
 
 ## Authority is domain-specific
 
@@ -75,7 +75,7 @@ There may be no single authoritative system for an entire economic workflow. Aut
 | quote status and amount | file-backed FSM | observed normalized quote |
 | job status and schedule | file-backed FSM | observed normalized job |
 | AIP offer/session identifiers | AIP adapter | protocol provenance/reference |
-| customer PII at Bind | user-authorized bind payload, handed to operational adapter | do not treat as universal canonical identity model |
+| customer PII at Bind | bind payload with declared consent scope, handed to operational adapter | do not treat as universal canonical identity or authorization proof |
 | completion/evidence | future operational/evidence-producing system | normalize only what the source exposes |
 | payment/settlement | out of scope; future settlement rail | reference/adapter boundary only |
 

@@ -1,6 +1,6 @@
 {
   "schema_version": "0.1.0-experimental",
-  "workflow_id": "wf_plumbing_001",
+  "workflow_id": "wf-plumbing-001",
   "provider": {
     "provider_id": "provider_demo_plumbing",
     "name": "Demo Plumbing Co.",

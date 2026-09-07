@@ -10,15 +10,17 @@ This repository starts with a residential plumbing workflow and treats existing 
 
 ## What this repository is testing
 
-The experiment asks whether one normalized canonical interoperability representation can sit between:
+The experiment asks whether a small normalized interoperability layer can sit between:
 
 - an existing business workflow;
 - Agent Intake Protocol (AIP) for discovery/intake/offer/bind;
 - Agent2Agent (A2A) v1.0 as an independently meaningful agent-to-agent interaction surface;
 - legacy quotation semantics such as OASIS UBL;
-- later MCP and settlement/verification adapters.
+- read-only operational observations from Jobber and a ServiceTitan-shaped fixture;
+- an HTTP/OpenAPI inspection surface protected experimentally by x402/Circle Gateway;
+- later MCP and settlement/verification adapters only where a concrete interoperability need survives falsification.
 
-The scope remains deliberately narrow: **one plumbing workflow, one normalized representation, AIP + A2A, no workflow replacement**.
+The scope remains deliberately narrow: **one plumbing workflow, AIP + A2A cross-surface inspection, small earned observation vocabularies, read-only real-system evidence, and no workflow replacement**.
 
 ```text
 AIP buyer flow --------------------+
@@ -64,11 +66,11 @@ Endpoints:
 - `POST /api/aip/residential-plumbing-quote`
 - `POST /api/aip/bind`
 
-The intake is deliberately privacy-minimized: postal code and non-identifying service constraints are accepted before binding. Full name, phone, and street address are requested only at Bind.
+The intended intake schema is privacy-minimized: it requests postal code and non-identifying service constraints before binding, while full name, phone, and street address belong at Bind. The current runtime still needs metadata hardening so that this boundary is enforced beyond `intake_data`.
 
-For this experiment, **Bind is an authorized handoff to the provider's operational workflow**. It is not represented as payment, job completion, or a universal booking primitive. The file-backed FSM remains authoritative for quote acceptance and job scheduling.
+For this experiment, **Bind is treated as the adapter's handoff point into the provider's operational workflow**. The current synthetic adapter checks the declared Bind scope and continuity of the agent ID, but it does not constitute an external authentication/delegation proof. Bind is not represented as payment, job completion, or a universal booking primitive. The file-backed FSM remains authoritative for quote acceptance and job scheduling.
 
-The generated/consumed AIP manifest, intake request, offer response, and bind request are automatically checked against vendored upstream JSON Schemas from the pinned 2026-02-27 snapshot. This is stronger evidence than local shape checks, but it is not AIP certification or proof of full interoperability.
+The committed/generated AIP manifest, intake fixture, offer response, and bind-request fixture used by the conformance suite are checked against vendored upstream JSON Schemas from the pinned 2026-02-27 snapshot. Runtime validator parity with every upstream constraint is a known hardening item. This evidence is not AIP certification or proof of full interoperability.
 
 The bind response remains adapter-local because AIP v0.1.0 defines a bind-request schema but does not define a normative bind-response schema.
 
@@ -99,28 +101,33 @@ This distinction is executable in the tests: the A2A Task can be `TASK_STATE_COM
 Requires Node.js 22.16+; CI runs Node 24.
 
 ```bash
-npm install
+npm ci
 npm test
 npm start       # AIP server, default port 3000
 npm run start:a2a  # A2A server, default port 3001
+npm run start:x402 # fixed public synthetic x402 inspection, default port 3002
 ```
 
-Both servers use the same `.runtime/fsm-state.json` by default, so an AIP-created workflow can be inspected through A2A without creating a second operational record.
+The AIP and A2A servers use the same `.runtime/fsm-state.json` by default, so an AIP-created workflow can be inspected through A2A without creating a second operational record. The x402 server also reads that state but exposes only the explicitly configured public synthetic workflow.
+
+`npm test` is deterministic and does not invoke live external systems. The opt-in Jobber and Circle Gateway checks remain separate as `npm run test:jobber-live` and `npm run test:circle-live`.
 
 ## What the tests currently demonstrate
 
 - AIP v0.1.0 upstream-schema validation for manifest/intake/offer/bind-request artifacts;
-- privacy-minimized AIP intake and Bind-level PII handoff;
+- privacy-minimized AIP `intake_data` and Bind-level PII handoff for the tested fixture; runtime metadata hardening remains a known gap;
 - quote transition `offered -> accepted` and job transition `pending -> scheduled` in the existing-system mock;
 - projection of confirmed FSM state into the experimental canonical representation;
 - official A2A Agent Card discovery and HTTP+JSON client/server interaction;
 - one AIP-created workflow exposed through a second independent A2A surface;
 - AIP and A2A resolving to the same requirement/quote/job references;
-- protocol IDs remaining separate from canonical and FSM identities;
+- A2A Task/context identity remaining separate from the physical FSM Job identity;
 - A2A Task state remaining semantically separate from physical-service Job state;
-- read-only A2A inspection not mutating the file-backed FSM.
+- read-only A2A inspection not mutating the file-backed FSM;
+- ServiceTitan-shaped Appointment and real Jobber Visit evidence for the narrow `OccurrenceObservation` vocabulary;
+- a fixed public synthetic HTTP inspection resource protected by deterministic x402 gating, plus an opt-in Circle Gateway live harness.
 
-These results are evidence for the current synthetic workflow only. They do not yet demonstrate interoperability against a real FSM/API or multiple operational systems.
+These results include a real **read-only Jobber API observation path**, but they do not yet demonstrate safe production writes, a second live operational system, or protocol-neutral workflow origination. The current shared `WorkflowInspection` still starts from an AIP-originated synthetic FSM record, and the canonical workflow ID is mechanically derived from the AIP session ID; neutral correlation is a remaining falsifier.
 
 ## Evidence backbone
 
@@ -130,6 +137,7 @@ See:
 - [`crosswalk/protocol-capabilities.md`](crosswalk/protocol-capabilities.md)
 - [`docs/experiment.md`](docs/experiment.md)
 - [`docs/architecture.md`](docs/architecture.md)
+- [`docs/contract-status.md`](docs/contract-status.md)
 - [`schemas/service-workflow.schema.json`](schemas/service-workflow.schema.json)
 - [`fixtures/plumbing/workflow.example.json`](fixtures/plumbing/workflow.example.json)
 - [`fixtures/aip/intake.request.json`](fixtures/aip/intake.request.json)
@@ -145,7 +153,9 @@ These are version-sensitive and must be rechecked before implementation changes:
 
 ## Current pass / remaining falsification
 
-The repository now has executable evidence that **one synthetic plumbing workflow can support two independent agent-facing representations, AIP and A2A, without protocol-specific copies of the quote/job state**.
+The repository now has executable evidence that **one AIP-originated synthetic plumbing workflow can support independent AIP, A2A and HTTP/x402 views without protocol-specific copies of the quote/job state**, plus read-only cross-system observation evidence from ServiceTitan-shaped data and Jobber.
+
+This does **not** yet prove that the shared correlation/inspection layer is protocol-neutral: the current canonical workflow ID is derived from the AIP session and the inspection payload retains an AIP offer reference. A high-priority next falsifier is to originate state outside AIP and expose it through the same neutral correlation/inspection boundary.
 
 The broader deployment thesis is still unproven. It should be revised or narrowed if any of these occur:
 

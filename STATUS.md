@@ -1,10 +1,10 @@
 # Project status
 
-_Last updated: 2026-08-15_
+_Last updated: 2026-09-06_
 
 ## Current stage
 
-**Tier 5 — cross-system Occurrence mapping with live Jobber gate passed**
+**Experimental interoperability testbed through TH-INTEROP-19; protocol-hygiene and neutral-correlation gates next**
 
 No production interoperability or protocol-certification claims are made.
 
@@ -18,7 +18,7 @@ No production interoperability or protocol-certification claims are made.
 - [x] Residential-plumbing fixture
 - [x] Falsifiable experiment design
 - [x] Executable AIP v0.1.0 manifest/intake/offer/bind reference adapter
-- [x] Privacy boundary: non-PII intake -> authorized PII at Bind
+- [x] Privacy-minimized AIP `intake_data` -> PII handoff at Bind for the tested fixture
 - [x] File-backed FSM adapter
 - [x] AIP -> FSM -> canonical round-trip tests
 - [x] Automatic validation against pinned upstream AIP JSON Schemas where normative schemas exist
@@ -39,6 +39,16 @@ No production interoperability or protocol-certification claims are made.
 - [x] Live Jobber test-account run with a temporary authorized token
 - [x] Sanitized live Jobber response shape captured as evidence fixture
 - [x] GitHub Actions test workflow
+- [x] HTTP/OpenAPI read-only workflow-inspection surface shared with A2A
+- [x] Fixed public synthetic x402 inspection boundary with buyer-unselectable workflow ID
+- [x] Deterministic x402 resource tests with no funded wallet or secret
+- [x] Opt-in Circle Gateway live-test harness
+- [x] Explicit contract/version-status document separating upstream, experimental and historical artifacts
+- [ ] Runtime AIP validation parity with every vendored upstream schema constraint
+- [ ] Protocol-neutral correlation/inspection from a workflow not originated by AIP
+- [x] Canonical fixture/runtime projection validation against `service-workflow.schema.json`
+- [ ] OpenAPI contract/runtime validation
+- [ ] Write-side idempotency/replay/precondition semantics
 - [ ] Real ServiceTitan/API adapter
 - [ ] Multi-system authority/provenance test against two live systems
 - [ ] Completion/evidence interoperability tests
@@ -55,8 +65,8 @@ No production interoperability or protocol-certification claims are made.
 | A new TriHerm protocol is required | Unsupported |
 | Canonical state should be the operational source of truth | Rejected as the current architecture direction |
 | AIP can be projected onto the current synthetic plumbing FSM without replacing it | Supported by executable tests |
-| Bind can act as an authorized handoff into the synthetic FSM | Supported by executable tests; not universal AIP semantics |
-| AIP artifacts used by the experiment match pinned upstream normative schemas | Supported by automated schema tests for manifest/intake/offer/bind request |
+| Bind proves external authorization/delegation | Not supported; current adapter checks declared Bind scope + same agent ID only |
+| AIP fixtures/generated artifacts used by conformance tests match pinned upstream normative schemas | Supported for manifest/intake/offer/bind request examples; runtime validator parity remains open |
 | One canonical representation can support two independent agent-facing views | Initial support: AIP + A2A over one synthetic workflow |
 | A2A Task state can remain distinct from physical Job state | Supported by executable test: Task completed while Job remains scheduled |
 | A single `job.scheduled_for` can faithfully represent ServiceTitan-shaped scheduling | Falsified by fixture: one Job has multiple Appointments with independent windows |
@@ -70,6 +80,8 @@ No production interoperability or protocol-certification claims are made.
 | `accepted_as`, `offered_via`, and `converted_from` are stable canonical relationships | Not yet supported as a package; documented as candidates/deferred semantics only |
 | One useful normalized core can survive multiple operational systems | Supported at the observation layer by ServiceTitan-shaped Appointment and live Jobber Visit mappings; canonical-schema promotion remains withheld |
 | Existing real business workflows can remain authoritative while becoming agent-accessible | Supported for the current read-only Jobber path; production mutation authority remains untested |
+| Shared workflow correlation is protocol-neutral | Not yet supported; current workflow identity/inspection is still AIP-origin coupled |
+| x402 payment for the public inspection resource equals payment/authorization for plumbing work | Rejected; payment is scoped to the digital inspection resource only |
 | Adapter/interoperability infrastructure is a meaningful deployment wedge | Working hypothesis, not a fact |
 
 ## Authority model
@@ -102,7 +114,7 @@ The Jobber work in this stage is read-only. Jobber remains authoritative for its
 
 ### AIP
 
-Pinned to **AIP v0.1.0 / 2026-02-27**. The generated/consumed manifest, intake request, offer response, and bind request are checked against vendored upstream JSON Schemas from that snapshot. The adapter-local bind response remains outside normative AIP schema coverage.
+Pinned to **AIP v0.1.0 / 2026-02-27**. The conformance suite checks the generated manifest and offer plus committed intake/bind-request examples against vendored upstream JSON Schemas from that snapshot. Runtime validator parity with every upstream constraint remains a hardening item. The adapter-local bind response remains outside normative AIP schema coverage.
 
 ### A2A
 
@@ -135,13 +147,23 @@ Deterministic CI continues to use synthetic official-shaped data only. The live 
 
 See [`docs/jobber/pr7-live-contract.md`](docs/jobber/pr7-live-contract.md).
 
+### TH-INTEROP-18 / TH-INTEROP-19 inspection and x402 boundary
+
+The repository also exposes one shared read-only `WorkflowInspection` through A2A and HTTP, plus a separate x402-protected route for one server-configured synthetic/public workflow. The paid caller cannot supply a workflow ID. Payment-layer identity and settlement metadata are deliberately not promoted into workflow/customer/authorization semantics.
+
+The Circle Gateway check is opt-in and externally funded. Deterministic CI uses an injected test gate and does not spend funds or require secrets.
+
+See `openapi.yaml`, `research/th-interop-19-x402-public-resource-boundary.md`, and `research/th-interop-19-circle-live-gate.md`.
+
 ## Next gate
 
 Do **not** migrate `Occurrence` into `service-workflow.schema.json` automatically just because the first live-system gate passed.
 
 The observation vocabulary has now earned stronger evidence: one ServiceTitan-shaped operational model and one real Jobber API model map into it without invented lifecycle, schedule, completion, or customer-acceptance semantics. The next architectural decision is whether that is sufficient for canonical-schema promotion or whether a second live operational source should be required first.
 
-A high-value next experiment is to test another live connectivity path while preserving Jobber as the control condition: either a direct second operational API or an integration substrate such as Agave. The question is whether outsourced connectivity preserves source identity, authority, provenance, occurrence boundaries, and native state well enough that TriHerm does not need to build every adapter directly.
+Before adding another protocol or enlarging the canonical schema, the highest-value implementation gate is to remove the accidental AIP origin dependency from shared correlation/inspection and prove the same boundary with a workflow originated outside AIP. In parallel, runtime AIP validation, idempotency/replay behavior, and schema/OpenAPI contract checks should be hardened.
+
+After that, test another live connectivity path while preserving Jobber as the control condition: either a direct second operational API or an integration substrate such as Agave. The question is whether outsourced connectivity preserves source identity, authority, provenance, occurrence boundaries, and native state well enough that TriHerm does not need to build every adapter directly.
 
 Separately, resolve the exact canonical money representation before decimal-valued quotes or payment/UBL/UCP mappings.
 
