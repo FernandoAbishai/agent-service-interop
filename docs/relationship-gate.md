@@ -22,9 +22,11 @@ The parent type remains source-visible. The interoperability layer must not sile
 
 Some source systems expose provenance between an estimate/quote and later operational work. Preserve those source references when observed, but do not promote `converted_from` into a canonical relationship until a second executable source shape requires the same query semantics.
 
-### `offered_via` — deferred
+### `offered_via` — historical broad relationship still deferred; thin response relation now earned
 
-A stable Requirement-to-Offer relationship is not yet demonstrated across the executable fixtures. Do not infer an intake context simply because an Estimate or Quote exists.
+This gate originally found no stable broad `Requirement -> Offer` relationship. That conclusion remains valid for a universal business relationship, but later TH-INTEROP-16/23 evidence narrows the picture: `ServiceRequestObservation` and `OfferResponseObservation` now preserve a source-backed response link between an AIP intake/session or UBL RFQ line and the offer/quotation that answers it.
+
+That earned observation is **not** a canonical `offered_via` edge, does not prove a rich Requirement or Offer entity, and does not authorize inferring intake context from an arbitrary Estimate or Quote.
 
 ### `accepted_as` — deferred
 
@@ -71,4 +73,4 @@ This gate does not:
 
 ## Next falsification
 
-The next useful evidence is another executable operational shape using the same `OccurrenceObservation` contract. If that mapping requires vendor-specific branching for decision-critical fields, the occurrence abstraction should be narrowed or rejected rather than expanded automatically.
+Historical note: the next falsifier for this gate was another operational occurrence shape, and later Jobber evidence supplied that independent occurrence mapping. Current repository-wide sequencing is maintained only in the `STATUS.md` **Next gate** section; this historical document should not be used to choose the next implementation.

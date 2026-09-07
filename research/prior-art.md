@@ -10,9 +10,9 @@ The project now has an explicit strategic objective to pursue a preferably unive
 |---|---|---|---|
 | Agent Intake Protocol (AIP) v0.1.0 | Agent-facing discovery, structured intake, offer/review/bind lifecycle | Discovery/intake/offer semantics and manifest shape | Does not by itself prove integration with a real field-service operating system |
 | Universal Commerce Protocol (UCP) v2026-08-25 | Commerce services/capabilities including shopping checkout and order, payment handlers, discovery profile | Commerce vocabulary and compatible surfaces where semantically appropriate | Capability-specific checkout/order semantics do not prove a generic cross-vertical Commitment lifecycle |
-| OASIS UBL 2.4 | Mature procurement documents including RFQ, Quotation, Order and Order Response | Quotation and ordering semantics, procurement prior art | UBL Ordering creates a buyer/seller contractual obligation; that must not be conflated with AIP Bind, booking, payment, or provider work authorization |
-| MCP | Tool/resource protocol; Tasks for durable/asynchronous operations | Tool execution and async-operation mechanics | Does not define the economic semantics of whether physical work was satisfactorily completed |
-| Agent2Agent (A2A) | Agent-to-agent communication and Agent Cards | Future cross-agent surface | Not the same protocol as ACP; this project should avoid conflating transport/governance with service-commerce semantics |
+| OASIS UBL 2.5 CS01; TH-INTEROP-23 pinned to 2.4 | Mature procurement documents including RFQ, Quotation, Order and Order Response | Quotation and ordering semantics, procurement prior art | 2.5 supersedes 2.4 as the newer work product, but the experiment remains explicitly 2.4-shaped; Ordering obligation semantics must not be conflated with AIP Bind, booking, payment, or provider work authorization |
+| MCP 2026-07-28 + Tasks extension | Tool/resource protocol; extension-based durable/asynchronous operations | Tool execution and async-operation mechanics | Tasks moved from the 2025-11-25 experimental core into `io.modelcontextprotocol/tasks`; neither location defines satisfactory physical-service completion |
+| Agent2Agent (A2A) 1.0.0 | Agent-to-agent communication and Agent Cards | Future cross-agent surface | Not the same protocol as ACP; this project should avoid conflating transport/governance with service-commerce semantics |
 | AP2 | Delegated payment/authorization patterns | Future authorization/settlement adapter concepts | Not the operational system where service work is executed |
 | ERC-8183 | Draft agentic-commerce job/escrow/evaluator pattern | Prior art for job, evaluator, completion/rejection and release | Draft status; does not establish the long-tail field-service deployment path |
 | RAILS | Research architecture for obligation/evidence/clearing | Prior art for evidence-conditioned clearing | Research prior art rather than proof of broad deployment into SMB field-service systems |
@@ -24,9 +24,11 @@ The project now has an explicit strategic objective to pursue a preferably unive
 - AIP whitepaper: https://agent-intake-protocol.github.io/agent-intake-protocol/whitepaper.html
 - UCP v2026-08-25 specification: https://ucp.dev/2026-08-25/specification/overview/
 - UCP v2026-08-25 Order capability: https://ucp.dev/2026-08-25/specification/shopping/order/
-- UBL 2.4: https://docs.oasis-open.org/ubl/UBL-2.4.html
-- MCP specification: https://modelcontextprotocol.io/
-- A2A repository/specification: https://github.com/a2aproject/A2A
+- UBL 2.5 latest-stage work product: https://docs.oasis-open.org/ubl/UBL-2.5.html
+- UBL 2.4 experiment source: https://docs.oasis-open.org/ubl/UBL-2.4.html
+- MCP 2026-07-28 release: https://blog.modelcontextprotocol.io/posts/2026-07-28/
+- MCP Tasks extension: https://tasks.extensions.modelcontextprotocol.io/specification/draft/tasks
+- A2A 1.0.0 specification: https://a2a-protocol.org/dev/specification/
 - AP2: https://ap2.org/
 - ERC-8183: https://eips.ethereum.org/EIPS/eip-8183
 - RAILS: https://arxiv.org/abs/2606.08790
@@ -54,6 +56,10 @@ UCP `Service` refers to a protocol/API surface. A business's commercial offering
 ### Versioned UCP behavior
 
 Do not encode a timeless rule from one UCP release. Record the exact UCP version/date used by any fixture or crosswalk. The current released version observed for this gate is `2026-08-25`; current documentation continues to use reverse-domain capability/service identifiers and capability-specific checkout/order semantics. Future releases may change governance or capability details, so TriHerm must not copy those mechanics into an unversioned kernel rule.
+
+### Versioned UBL/MCP behavior
+
+Do not silently upgrade historical falsifier evidence. TH-INTEROP-23 remains pinned to UBL 2.4 even though OASIS now publishes UBL 2.5 Committee Specification 01 as the newer work product. Likewise, MCP Tasks should now be discussed as the 2026-07-28 `io.modelcontextprotocol/tasks` extension rather than the older 2025-11-25 experimental-core API.
 
 ## Current working hypothesis
 

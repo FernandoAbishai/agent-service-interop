@@ -73,7 +73,7 @@ The protocol kernel stays unchanged. These observations can be carried by a futu
 
 ## Next gates
 
-1. Resolve the canonical money representation before any rich Offer/Quote profile is proposed.
+1. Resolve the exact-money representation boundary before any rich Offer/Quote profile is proposed; this study does not itself promote a canonical/public Money primitive.
 2. Obtain at least one authoritative operational quote/estimate source and test whether the thin offer-response observation survives it.
 3. Observe two authoritative commitment transitions and determine whether they share a precise invariant beyond "the user accepted something."
 4. Keep booking, authorization/delegation, operational Job creation, payment, and settlement separate unless source-backed evidence proves equivalence.

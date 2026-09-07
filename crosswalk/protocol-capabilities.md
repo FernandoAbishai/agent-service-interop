@@ -1,6 +1,6 @@
 # Protocol-to-workflow crosswalk
 
-This crosswalk maps one **residential plumbing** workflow to existing protocol concepts. It intentionally separates protocol-native concepts, system-native semantics, and candidate TriHerm coordination concepts.
+This crosswalk maps one **residential plumbing** workflow to existing protocol concepts. It intentionally separates protocol-native concepts, system-native semantics, and candidate TriHerm coordination concepts. Version-sensitive references should be read with `research/prior-art.md`; TH-INTEROP-23 remains pinned to UBL 2.4, while current prior-art tracking also records UBL 2.5 and MCP 2026-07-28.
 
 A workflow stage is **not automatically a protocol primitive**. The stages below are a reference sequence used to compare protocol/system coverage and determine which concepts, if any, can earn a place in a future TriHerm coordination kernel.
 

@@ -1,6 +1,6 @@
 # TH-INTEROP-15 — Minimal Economic Primitive Set
 
-_Status: architecture falsification gate. TH-INTEROP-16 narrowing result accepted. This document is evidence for the future TriHerm protocol thesis; it does not by itself define a public/normative protocol or promote new fields into the canonical schema._
+_Status: architecture falsification gate. TH-INTEROP-16 and TH-INTEROP-23 narrowing results accepted. This document is evidence for the future TriHerm protocol thesis; it does not by itself define a public/normative protocol or promote new fields into the canonical schema._
 
 _Last checked against primary sources: 2026-09-07._
 
@@ -136,9 +136,9 @@ Primary source: https://a2a-protocol.org/dev/specification/
 
 ### MCP
 
-MCP Tasks provide durable/asynchronous request execution mechanics and deferred result retrieval. They are transport/execution mechanics, not proof that physical service work was completed satisfactorily.
+In the MCP 2026-07-28 specification family, Tasks moved out of the experimental core into the `io.modelcontextprotocol/tasks` extension. Tasks provide durable/asynchronous request execution mechanics and deferred result retrieval. They are transport/execution mechanics, not proof that physical service work was completed satisfactorily.
 
-Primary source: https://modelcontextprotocol.io/specification/2025-11-25/basic/utilities/tasks
+Primary sources: https://blog.modelcontextprotocol.io/posts/2026-07-28/ and https://tasks.extensions.modelcontextprotocol.io/specification/draft/tasks
 
 ### UCP
 
@@ -148,9 +148,9 @@ Primary sources: https://ucp.dev/2026-08-25/specification/overview/ and https://
 
 ### UBL
 
-UBL 2.4 contains Request For Quotation, Quotation, Order and related mature procurement semantics. Its Ordering process explicitly creates a contractual obligation between buyer and seller, which is one reason an AIP Bind cannot be silently renamed into the same universal Commitment transition. Requirement/quote/order concepts therefore have strong prior art and must not be presented as novel primitives.
+TH-INTEROP-23 is intentionally pinned to UBL 2.4, which contains Request For Quotation, Quotation, Order and related mature procurement semantics. Its Ordering process explicitly creates a contractual obligation between buyer and seller, which is one reason an AIP Bind cannot be silently renamed into the same universal Commitment transition. OASIS has since published UBL 2.5 Committee Specification 01, which supersedes 2.4; that newer release is prior-art context, not retroactive conformance evidence for the 2.4-shaped falsifier fixtures.
 
-Primary source: https://docs.oasis-open.org/ubl/UBL-2.4.html
+Primary sources: https://docs.oasis-open.org/ubl/UBL-2.4.html and https://docs.oasis-open.org/ubl/UBL-2.5.html
 
 ### Evidence / verification prior art
 
@@ -158,9 +158,9 @@ See `research/prior-art.md` for ERC-8183, RAILS, TessPay, and VCAP. TH-INTEROP-1
 
 ## Next falsification candidates
 
-The Requirement falsifier and the Request -> Offer -> Commitment boundary falsifier are complete at their current evidence level. The next code-bearing experiment should attack a remaining uncertain boundary rather than enlarge the observation vocabularies by assumption.
+The Requirement falsifier and the Request -> Offer -> Commitment boundary falsifier are complete at their current evidence level. The items below are a research backlog of remaining uncertain boundaries, **not the repository-wide execution order**. Current sequencing is defined only by the `STATUS.md` **Next gate** section; at present that sequence places the bounded exact-money representation falsifier before the authoritative operational quote experiment.
 
-High-value options:
+High-value later falsification targets include:
 
 1. **Operational quote falsifier** — after resolving the exact-money representation gate, map one authoritative quote/estimate through an independent representation and test round-trip/auditability against the earned thin OfferResponseObservation.
 2. **Commitment authority falsifier** — compare two authoritative real binding/acceptance transitions and determine whether a common `Commitment` concept exists without conflating quote acceptance, booking, order creation, payment, and work authorization.
@@ -170,6 +170,6 @@ Do not select an option because it produces the largest schema. Select the small
 
 ## Gate outcome
 
-TH-INTEROP-15 passes as a narrowing gate: it reduced the candidate core, and TH-INTEROP-16 further falsified the broad Requirement concept.
+TH-INTEROP-15 passes as a narrowing gate: it reduced the candidate core, TH-INTEROP-16 further falsified the broad Requirement concept, and TH-INTEROP-23 earned only a thin offer-response observation while leaving rich Quote and Commitment unpromoted.
 
 It would be a regression to reinterpret this result as permission to create a renamed end-to-end commerce ontology or to assume TriHerm owns every stage of the transaction.

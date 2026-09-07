@@ -24,13 +24,13 @@ The experiment asks whether a small normalized interoperability layer can sit be
 
 - an existing business workflow;
 - Agent Intake Protocol (AIP) for discovery/intake/offer/bind;
-- Agent2Agent (A2A) v1.0 as an independently meaningful agent-to-agent interaction surface;
+- Agent2Agent (A2A) v1.0.0 as an independently meaningful agent-to-agent interaction surface;
 - legacy quotation semantics such as OASIS UBL;
 - read-only operational observations from Jobber and a ServiceTitan-shaped fixture;
 - an HTTP/OpenAPI inspection surface protected experimentally by x402/Circle Gateway;
 - later MCP and settlement/verification adapters only where a concrete interoperability need survives falsification.
 
-The implementation scope remains deliberately narrow: **one plumbing workflow, AIP + A2A cross-surface inspection, small earned observation vocabularies, read-only real-system evidence, and no workflow replacement**. That narrow scope is the evidence base from which a protocol kernel may be earned rather than assumed.
+The implementation scope remains deliberately narrow: **one plumbing workflow, AIP + A2A cross-surface inspection, small earned observation vocabularies, read-only real-system evidence, and no workflow replacement**. The structural kernel has now been implemented as an experimental contract; the same narrow evidence discipline continues to determine whether any economic semantics can be promoted beyond observation-layer results.
 
 ```text
 AIP buyer flow --------------------+
@@ -42,7 +42,7 @@ A2A provider-agent inspection -----+--> interop correlation + read-only facets
                                      <-- operational authority
 ```
 
-AIP and A2A retain their own protocol identities. They reference the same underlying requirement, quote, and operational job rather than creating protocol-specific copies of those objects.
+AIP and A2A retain their own protocol identities. In the current synthetic plumbing experiment they can reference the same operational requirement/quote/job records without creating protocol-specific copies; those synthetic object names are not claims of universal TriHerm primitives.
 
 ## What this repository is not
 
@@ -87,7 +87,7 @@ The bind response remains adapter-local because AIP v0.1.0 defines a bind-reques
 
 ## A2A implementation
 
-The second surface uses the official **A2A JavaScript SDK v1.0.1** and exposes **A2A Protocol v1.0 over HTTP+JSON**.
+The second surface uses the official **A2A JavaScript SDK v1.0.1** and exposes **A2A Protocol v1.0.0 over HTTP+JSON**.
 
 Endpoints/surfaces:
 
@@ -175,15 +175,15 @@ See:
 These are version-sensitive and must be rechecked before implementation changes:
 
 - **AIP v0.1.0** exposes `/.well-known/agent-intake.json` and a Discover -> Submit -> Offer -> Review -> Bind lifecycle.
-- **A2A v1.0** is used here only for agent discovery/interaction/task/artifact mechanics; quote, physical job execution, fulfillment, and customer acceptance remain application/business semantics.
+- **A2A v1.0.0** is used here only for agent discovery/interaction/task/artifact mechanics; quote, physical job execution, fulfillment, and customer acceptance remain application/business semantics.
 - **UCP** uses `/.well-known/ucp` to advertise UCP services/capabilities/payment handlers. In UCP, a *Service* is an API surface/vertical concept; it must not be confused with a plumber's commercial service offering.
-- **MCP Tasks** address durable/asynchronous tool-operation mechanics, not the business meaning of physical-service completion.
+- **MCP 2026-07-28 Tasks extension (`io.modelcontextprotocol/tasks`)** addresses durable/asynchronous tool-operation mechanics, not the business meaning of physical-service completion.
 
 ## Current pass / remaining falsification
 
 The repository now has executable evidence that **one AIP-originated synthetic plumbing workflow can support independent AIP, A2A and HTTP/x402 views without protocol-specific copies of the operational state**, plus read-only cross-system observation evidence from ServiceTitan-shaped data and Jobber.
 
-The TH-INTEROP-20 synthetic falsifier additionally shows that the shared inspection path no longer structurally requires an AIP-origin workflow: correlation is stored separately from the operational FSM, AIP IDs are protocol refs only, and a provider-native synthetic source can expose only the job facet it actually has. The stronger next falsifier is the same separation against another live operational origin.
+The TH-INTEROP-20 synthetic falsifier additionally shows that the shared inspection path no longer structurally requires an AIP-origin workflow: correlation is stored separately from the operational FSM, AIP IDs are protocol refs only, and a provider-native synthetic source can expose only the job facet it actually has. A stronger **deployment/operational-evidence** falsifier remains the same separation against another live operational origin; it is a separate track and does not override the repository-wide next-gate sequence in `STATUS.md`.
 
 The broader deployment and protocol thesis is still unproven. The universal kernel should be revised or narrowed if any of these occur:
 

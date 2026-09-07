@@ -4,7 +4,7 @@ _Last updated: 2026-09-07_
 
 ## Current stage
 
-**Experimental interoperability + pre-specification protocol-design testbed through TH-INTEROP-21 replay/write-safety gate**
+**Experimental interoperability + pre-specification protocol-design testbed through TH-INTEROP-23 economic-boundary falsification**
 
 Strategic direction: use evidence from this testbed to converge toward a preferably universal, authority-aware TriHerm protocol for agent-to-business/economic coordination. No production interoperability, protocol-certification, stability, or universality claims are made today.
 
@@ -23,7 +23,7 @@ Strategic direction: use evidence from this testbed to converge toward a prefera
 - [x] AIP -> FSM -> canonical round-trip tests
 - [x] Automatic validation against pinned upstream AIP JSON Schemas where normative schemas exist
 - [x] Architecture direction: normalized canonical interoperability state without operational authority
-- [x] A2A v1.0 Agent Card + HTTP+JSON provider-agent surface via official JS SDK
+- [x] A2A v1.0.0 Agent Card + HTTP+JSON provider-agent surface via official JS SDK
 - [x] AIP-created workflow exposed through A2A without protocol-specific quote/job copies
 - [x] A2A Task identity/state kept separate from FSM Job identity/state
 - [x] ServiceTitan-shaped read-only observation fixture
@@ -133,7 +133,7 @@ Pinned to **AIP v0.1.0 / 2026-02-27**. The conformance suite checks the generate
 
 ### A2A
 
-Uses **A2A Protocol v1.0** through official `@a2a-js/sdk@1.0.1`, with one HTTP+JSON interface and one read-only `inspect_service_workflow` skill.
+Uses **A2A Protocol v1.0.0** through official `@a2a-js/sdk@1.0.1`, with one HTTP+JSON interface and one read-only `inspect_service_workflow` skill.
 
 ### TH-INTEROP-20 neutral correlation
 
@@ -180,14 +180,14 @@ See `openapi.yaml`, `research/th-interop-19-x402-public-resource-boundary.md`, a
 
 ## Next gate
 
-PR #21 establishes the protocol thesis, and the subsequent kernel gate adds only a structural `0.1.0-experimental` envelope. Neither promotes `Occurrence` or other economic candidates into normative protocol semantics merely because they appear in the thesis or can be carried in a profile-owned payload.
+This section is the repository-wide sequencing source of truth. `Next gate` / `Next falsification` sections inside older gate documents record what was next **at that historical checkpoint** and must not override this current sequence.
 
-The observation vocabulary has now earned stronger evidence: one ServiceTitan-shaped operational model and one real Jobber API model map into it without invented lifecycle, schedule, completion, or customer-acceptance semantics. The next architectural decision is whether that is sufficient for canonical-schema promotion or whether a second live operational source should be required first.
+PR #21 established the protocol thesis, PR #23 added only a structural `0.1.0-experimental` kernel, and PR #24/TH-INTEROP-23 falsified the first post-kernel economic boundary. The current evidence earns `ServiceRequestObservation`, `OccurrenceObservation`, and a thin `OfferResponseObservation` only at the observation layer. Rich Quote remains a candidate; Commitment remains deferred.
 
-The accidental AIP-origin dependency in shared correlation/inspection has now been removed at the synthetic architecture level, and the synthetic AIP/file writer has bounded replay/concurrency hardening. The minimal **protocol kernel v0.1-experimental** covers only envelope/profile versioning, envelope-local actors, typed references/correlation, authority attribution, provenance, capabilities/extensions, and profile-owned payload. TH-INTEROP-23 now falsifies the first economic interaction boundary: the thin request -> offer-response relation survives AIP and UBL, while rich quote money/terms and generic Commitment do not. The stronger operational falsifier remains a second live origin using the same separation without invented facets.
+The next **specification-track** gate is the exact-money representation falsifier. It must compare exact, auditable representations without changing the kernel, promoting a public Money primitive, or treating the historical numeric plumbing quote as canonical.
 
-After that, test another live connectivity path while preserving Jobber as the control condition: either a direct second operational API or an integration substrate such as Agave. The question is whether outsourced connectivity preserves source identity, authority, provenance, occurrence boundaries, and native state well enough that TriHerm does not need to build every adapter directly.
+After the money representation gate, test `OfferResponseObservation` against an authoritative operational quote/estimate source. Prefer a source that also advances the separate **operational-evidence track** by providing a second live authority or otherwise independent operational origin. Money and terms may remain source-native/unmapped until that experiment proves a safe richer mapping.
 
-Next, resolve the exact canonical money representation before rich quote/payment/UBL/UCP mappings, then test the earned thin OfferResponseObservation against an authoritative operational quote/estimate source. Commitment remains deferred until two authoritative real transitions prove a common invariant more precise than acceptance.
+Occurrence canonical-schema promotion, a second live connectivity path, OpenAPI runtime validation, external write/reconciliation semantics, authorization/delegation, completion/evidence, and settlement remain separate open tracks. They are important, but none is a prerequisite for the bounded exact-money representation study.
 
 No public stable namespace or normative TriHerm capability should be frozen merely from the thesis. Candidate protocol semantics must continue to survive implementation and falsification before they are promoted into a versioned contract.

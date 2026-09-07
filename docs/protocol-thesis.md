@@ -115,14 +115,13 @@ Universality should be weakened or the kernel narrowed whenever these gates fail
 
 ## Near-term specification path
 
-The recommended chronology after this thesis is:
+Progress against the thesis as of 2026-09-07:
 
-1. **Protocol kernel v0.1-experimental** — envelope/versioning, actor/reference model, correlation, authority, provenance, extensions, and capability negotiation.
-2. **Economic interaction primitives** — test intent/requirement, offer, and commitment across AIP, UBL, existing provider state, and another meaningful surface.
-3. **Fulfillment semantics** — test execution references, occurrence, completion/evidence, and customer decision without collapsing them together.
-4. **Authorization and delegation** — define who may issue a command, on whose behalf, with what scope and replay/precondition behavior.
-5. **Settlement abstraction** — identify the minimal rail-neutral obligation/settlement references and map multiple rails without making payment the workflow authority.
-6. **Independent operational origins and controlled writes** — test the same semantics against at least a second live authority and production-shaped mutation/reconciliation boundaries.
-7. **Conformance and specification packaging** — only after the kernel survives the previous falsification gates.
+1. **Protocol kernel v0.1-experimental — implemented and under falsification.** Envelope/versioning, actor/reference model, correlation, descriptive authority, provenance, extensions, and capability descriptors now have an executable structural contract.
+2. **Economic interaction semantics — partially falsified.** A broad Requirement did not survive; thin `ServiceRequestObservation` and `OfferResponseObservation` did. Rich Quote remains a candidate because exact money/terms are unresolved, and Commitment remains deferred because AIP Bind and UBL Order are not equivalent.
+3. **Exact-money representation — next bounded specification-track gate.** Resolve an exact, reversible representation before any richer quote/payment mapping. This gate must not enlarge the kernel by default.
+4. **Authoritative operational quote evidence.** Re-test the earned thin offer-response relation against a real quote/estimate authority; preferably use an origin that also advances the second-live-system evidence track.
+5. **Fulfillment, authorization/delegation, settlement, and controlled writes — later independent gates.** These remain separate because completion, acceptance, permission, payment, and operational mutation do not imply one another.
+6. **Conformance and specification packaging — only after the preceding semantics survive independent implementations and authorities.**
 
 The current repository remains the reference lab and adversarial conformance/falsification environment while that specification is being earned.
