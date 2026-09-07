@@ -1,6 +1,7 @@
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
 import { resolve } from 'node:path';
 import { FileFsmStore } from './fsm-store.ts';
+import { FileWorkflowCorrelationStore } from './workflow-correlation.ts';
 import { PlumbingAipAdapter, AIP_VERSION } from './aip-adapter.ts';
 import { ValidationError } from './validation.ts';
 
@@ -86,11 +87,14 @@ export function createAipServer(adapter: PlumbingAipAdapter) {
 if (import.meta.url === `file://${process.argv[1]}`) {
   const port = Number(process.env.PORT ?? 3000);
   const statePath = resolve(process.env.FSM_STATE_PATH ?? '.runtime/fsm-state.json');
+  const correlationPath = resolve(process.env.WORKFLOW_CORRELATION_PATH ?? '.runtime/workflow-correlations.json');
   const store = new FileFsmStore(statePath);
-  const adapter = new PlumbingAipAdapter({ store });
+  const correlations = new FileWorkflowCorrelationStore(correlationPath);
+  const adapter = new PlumbingAipAdapter({ store, correlations });
   const server = createAipServer(adapter);
   server.listen(port, '127.0.0.1', () => {
     console.log(`agent-service-interop AIP adapter listening on http://127.0.0.1:${port}`);
     console.log(`file-backed FSM state: ${statePath}`);
+    console.log(`interop correlation state: ${correlationPath}`);
   });
 }

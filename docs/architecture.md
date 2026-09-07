@@ -12,6 +12,22 @@ A canonical representation may eventually be persisted for correlation, provenan
 
 The implementation should therefore grow with the simplicity of a derived projection while preserving a path toward a horizontal interoperability layer.
 
+## Correlation is separate from operational authority
+
+The repository now keeps interoperability correlation outside the operational file-FSM record:
+
+```text
+workflow_id
+  |
+  +-- operational_refs[] ---> authoritative/source-system objects
+  |
+  +-- protocol_refs[] ------> AIP/A2A/future protocol objects
+```
+
+`workflow_id` is repository-local correlation only. It is not a Job ID, AIP session, A2A Task, customer identity, ownership proof, authorization grant, or provider-independent source of truth. The correlation store persists references only; authoritative lifecycle state remains in the operational source.
+
+The inspection layer reads the correlation, then asks an operational observer for source-backed facets. A missing semantic remains absent. The current minimal `WorkflowInspection v0.3` does not require quote, completion, verification, or customer-decision fields merely to make every source look alike.
+
 ## Read path
 
 ```text
@@ -90,6 +106,8 @@ This table is experiment-specific. A real integration must document authority ex
 5. **No field becomes canonical merely because one protocol or one FSM exposes it.**
 6. **Missing semantics remain explicit.** Do not overload unrelated fields to create the appearance of interoperability.
 7. **Canonical persistence, event sourcing, conflict resolution, and orchestration are not implied by this decision.** They require separate evidence.
+8. **Correlation does not imply authority.** `workflow_id` links references but cannot authorize or mutate operational state.
+9. **Protocol references and operational references remain separate.** An AIP/A2A identifier is never silently promoted into operational identity, and an operational object ID is never presented as a protocol identity.
 
 ## Future multi-system classification
 

@@ -3,11 +3,13 @@ import assert from 'node:assert/strict';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { randomUUID } from 'node:crypto';
 import type { Address } from '../src/types.ts';
 import { FileFsmStore } from '../src/fsm-store.ts';
 import { PlumbingAipAdapter } from '../src/aip-adapter.ts';
 import { createAipServer } from '../src/server.ts';
 import { assertCanonicalWorkflow, toCanonicalWorkflow } from '../src/canonical.ts';
+import { MemoryWorkflowCorrelationStore } from '../src/workflow-correlation.ts';
 
 const SESSION = '37a606b6-86f3-4b6c-8e12-a4db917802ba';
 const SECOND_SESSION = '71d6c362-5a87-4de5-a4e0-696cfcf14ed6';
@@ -238,4 +240,43 @@ test('repeated intake with the same session is idempotent for offer identity', a
     assert.equal(firstBody.offer.id, secondBody.offer.id);
     assert.equal(firstBody.offer.details.quote_ref, secondBody.offer.details.quote_ref);
   });
+});
+
+test('AIP-backed workflow correlation is independent from session identity and stable across intake retry', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'agent-service-interop-correlation-'));
+  const store = new FileFsmStore(join(dir, 'fsm.json'));
+  const correlations = new MemoryWorkflowCorrelationStore();
+  let workflowCounter = 0;
+  const adapter = new PlumbingAipAdapter({
+    store,
+    correlations,
+    now: () => new Date('2026-08-14T22:30:00.000Z'),
+    idFactory: randomUUID,
+    workflowIdFactory: () => `correlation-${++workflowCounter}`
+  });
+
+  try {
+    const request = intake();
+    const first = adapter.submit(request, 'https://adapter.example');
+    const second = adapter.submit(request, 'https://adapter.example');
+    assert.equal(first.offer.id, second.offer.id);
+
+    const correlation = correlations.findByProtocolRef('AIP', 'session', SESSION);
+    assert.ok(correlation);
+    assert.equal(correlation.workflow_id, 'wf-correlation-1');
+    assert.notEqual(correlation.workflow_id, `wf-${SESSION}`);
+    assert.equal(workflowCounter, 1, 'retry must reuse the existing workflow correlation');
+    assert.ok(correlation.protocol_refs.some((ref) =>
+      ref.protocol === 'AIP' && ref.object_type === 'offer' && ref.id === first.offer.id
+    ));
+    assert.ok(correlation.operational_refs.some((ref) =>
+      ref.system === 'file_backed_fsm' && ref.object_type === 'job'
+    ));
+
+    const persistedOperationalState = store.getBySession(SESSION);
+    assert.ok(persistedOperationalState);
+    assert.equal('workflow_id' in persistedOperationalState, false, 'interop correlation must not be persisted into the operational FSM session');
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
 });

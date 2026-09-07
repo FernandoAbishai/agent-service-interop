@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Agent Service Interop Inspection API
-  version: 0.2.0-experimental
+  version: 0.3.0-experimental
   description: >-
     Read-only projections over the same underlying service workflow exposed
     through the repository's A2A inspection skill. These APIs do not authorize,
@@ -55,52 +55,71 @@ components:
   schemas:
     WorkflowInspection:
       type: object
-      required: [semantics, references, observed_state]
+      required: [semantics, references, facets]
       properties:
         semantics:
           type: object
-          required: [interaction_state_meaning, operational_authority]
+          required: [interaction_state_meaning]
           properties:
             interaction_state_meaning:
               type: string
-            operational_authority:
-              type: string
+          additionalProperties: false
         references:
           type: object
           required:
-            - canonical_workflow_id
-            - requirement_id
-            - quote_id
-            - aip_offer_id
-            - operational_job_id
+            - workflow_id
+            - operational_refs
+            - protocol_refs
           properties:
-            canonical_workflow_id:
+            workflow_id:
               type: string
-            requirement_id:
-              type: string
-            quote_id:
-              type: string
-            aip_offer_id:
-              type: string
-            operational_job_id:
-              type: string
-        observed_state:
+              description: Repository-local protocol-neutral correlation identifier; not an operational authority identifier.
+            operational_refs:
+              type: array
+              items:
+                type: object
+                required: [system, object_type, id]
+                properties:
+                  system:
+                    type: string
+                  object_type:
+                    type: string
+                  id:
+                    type: string
+                additionalProperties: false
+            protocol_refs:
+              type: array
+              items:
+                type: object
+                required: [protocol, object_type, id]
+                properties:
+                  protocol:
+                    type: string
+                  object_type:
+                    type: string
+                  id:
+                    type: string
+                additionalProperties: false
+          additionalProperties: false
+        facets:
           type: object
-          required:
-            - quote_status
-            - job_status
-            - scheduled_for
-            - completion_status
-            - customer_decision_status
           properties:
-            quote_status:
-              type: string
-            job_status:
-              type: string
-            scheduled_for:
-              type: [string, 'null']
-              format: date-time
-            completion_status:
-              type: string
-            customer_decision_status:
-              type: string
+            quote:
+              type: object
+              required: [status]
+              properties:
+                status:
+                  type: string
+              additionalProperties: false
+            job:
+              type: object
+              required: [status]
+              properties:
+                status:
+                  type: string
+                scheduled_for:
+                  type: [string, 'null']
+                  format: date-time
+              additionalProperties: false
+          additionalProperties: false
+      additionalProperties: false

@@ -10,6 +10,8 @@ import { FileFsmStore } from '../src/fsm-store.ts';
 import { PlumbingAipAdapter } from '../src/aip-adapter.ts';
 import { toCanonicalWorkflow } from '../src/canonical.ts';
 import { createPaidInspectionApp, X402_PUBLIC_INSPECTION_PATH } from '../src/x402-server.ts';
+import { MemoryWorkflowCorrelationStore } from '../src/workflow-correlation.ts';
+import { FileFsmWorkflowInspectionSource } from '../src/workflow-inspection.ts';
 
 async function freePort(): Promise<number> {
   const probe = createServer();
@@ -21,13 +23,15 @@ async function freePort(): Promise<number> {
   return port;
 }
 
-function seedWorkflow(store: FileFsmStore, sessionId: string) {
+function seedWorkflow(store: FileFsmStore, correlations: MemoryWorkflowCorrelationStore, sessionId: string) {
   const ids = [randomUUID(), randomUUID(), randomUUID(), randomUUID()];
   let index = 0;
   const adapter = new PlumbingAipAdapter({
     store,
+    correlations,
     now: () => new Date('2026-08-18T20:00:00.000Z'),
-    idFactory: () => ids[index++] ?? randomUUID()
+    idFactory: () => ids[index++] ?? randomUUID(),
+    workflowIdFactory: randomUUID
   });
   const offer = adapter.submit({
     aip_version: '0.1.0',
@@ -47,12 +51,14 @@ function seedWorkflow(store: FileFsmStore, sessionId: string) {
   });
   const session = store.getBySession(sessionId);
   assert.ok(session);
-  return toCanonicalWorkflow(session);
+  const correlation = correlations.findByProtocolRef('AIP', 'session', sessionId);
+  assert.ok(correlation);
+  return { canonical: toCanonicalWorkflow(session, correlation.workflow_id), correlation };
 }
 
-async function withServer(store: FileFsmStore, publicWorkflowId: string, paymentGate: RequestHandler, run: (baseUrl: string) => Promise<void>) {
+async function withServer(store: FileFsmStore, correlations: MemoryWorkflowCorrelationStore, publicWorkflowId: string, paymentGate: RequestHandler, run: (baseUrl: string) => Promise<void>) {
   const port = await freePort();
-  const app = createPaidInspectionApp(store, { publicWorkflowId, paymentGate });
+  const app = createPaidInspectionApp(new FileFsmWorkflowInspectionSource(store, correlations), { publicWorkflowId, paymentGate });
   const server = app.listen(port, '127.0.0.1');
   await new Promise<void>((resolve, reject) => {
     server.once('listening', resolve);
@@ -76,10 +82,11 @@ const requireSyntheticPayment: RequestHandler = (req, res, next) => {
 test('unpaid public synthetic resource returns 402 without mutating operational state', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'agent-service-interop-x402-unpaid-'));
   const store = new FileFsmStore(join(dir, 'fsm.json'));
+  const correlations = new MemoryWorkflowCorrelationStore();
   try {
-    const workflow = seedWorkflow(store, '37a606b6-86f3-4b6c-8e12-a4db917802ba');
+    const { canonical: workflow } = seedWorkflow(store, correlations, '37a606b6-86f3-4b6c-8e12-a4db917802ba');
     const before = structuredClone(store.read());
-    await withServer(store, workflow.workflow_id, requireSyntheticPayment, async (baseUrl) => {
+    await withServer(store, correlations, workflow.workflow_id, requireSyntheticPayment, async (baseUrl) => {
       const response = await fetch(`${baseUrl}${X402_PUBLIC_INSPECTION_PATH}`);
       assert.equal(response.status, 402);
       const body = await response.json() as any;
@@ -93,18 +100,21 @@ test('unpaid public synthetic resource returns 402 without mutating operational 
 test('synthetic paid request returns shared inspection without promoting payer/payment into workflow identity', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'agent-service-interop-x402-paid-'));
   const store = new FileFsmStore(join(dir, 'fsm.json'));
+  const correlations = new MemoryWorkflowCorrelationStore();
   try {
-    const workflow = seedWorkflow(store, '47a606b6-86f3-4b6c-8e12-a4db917802ba');
+    const { canonical: workflow } = seedWorkflow(store, correlations, '47a606b6-86f3-4b6c-8e12-a4db917802ba');
     const before = structuredClone(store.read());
-    await withServer(store, workflow.workflow_id, requireSyntheticPayment, async (baseUrl) => {
+    await withServer(store, correlations, workflow.workflow_id, requireSyntheticPayment, async (baseUrl) => {
       const response = await fetch(`${baseUrl}${X402_PUBLIC_INSPECTION_PATH}`, { headers: { 'x-th-interop-test-payment': 'paid' } });
       assert.equal(response.status, 200);
       const body = await response.json() as any;
-      assert.equal(body.references.canonical_workflow_id, workflow.workflow_id);
-      assert.equal(body.references.operational_job_id, workflow.job.job_id);
-      assert.equal(body.observed_state.job_status, 'scheduled');
-      assert.equal(body.observed_state.completion_status, 'not_claimed');
-      assert.equal(body.observed_state.customer_decision_status, 'pending');
+      assert.equal(body.references.workflow_id, workflow.workflow_id);
+      assert.ok(body.references.operational_refs.some((ref: any) =>
+        ref.object_type === 'job' && ref.id === workflow.job.job_id
+      ));
+      assert.equal(body.facets.job.status, 'scheduled');
+      assert.equal('completion' in body.facets, false);
+      assert.equal('customer_decision' in body.facets, false);
       assert.ok(!('payer' in body));
       assert.ok(!('payment' in body));
       assert.ok(!('customer_id' in body));
@@ -116,13 +126,14 @@ test('synthetic paid request returns shared inspection without promoting payer/p
 test('paid surface has no buyer-selectable workflow identifier', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'agent-service-interop-x402-private-'));
   const store = new FileFsmStore(join(dir, 'fsm.json'));
+  const correlations = new MemoryWorkflowCorrelationStore();
   try {
-    const publicWorkflow = seedWorkflow(store, '57a606b6-86f3-4b6c-8e12-a4db917802ba');
-    const privateWorkflow = seedWorkflow(store, '67a606b6-86f3-4b6c-8e12-a4db917802ba');
+    const { canonical: publicWorkflow } = seedWorkflow(store, correlations, '57a606b6-86f3-4b6c-8e12-a4db917802ba');
+    const { canonical: privateWorkflow } = seedWorkflow(store, correlations, '67a606b6-86f3-4b6c-8e12-a4db917802ba');
     let gateCalls = 0;
     const gate: RequestHandler = (_req, _res, next) => { gateCalls += 1; next(); };
     const before = structuredClone(store.read());
-    await withServer(store, publicWorkflow.workflow_id, gate, async (baseUrl) => {
+    await withServer(store, correlations, publicWorkflow.workflow_id, gate, async (baseUrl) => {
       const attemptedPrivatePath = `${baseUrl}/api/x402/workflows/${privateWorkflow.workflow_id}/inspection`;
       const response = await fetch(attemptedPrivatePath, { headers: { 'x-th-interop-test-payment': 'paid' } });
       assert.equal(response.status, 404);
@@ -135,9 +146,10 @@ test('paid surface has no buyer-selectable workflow identifier', async () => {
 test('missing configured public workflow never becomes available merely because payment succeeds', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'agent-service-interop-x402-missing-public-'));
   const store = new FileFsmStore(join(dir, 'fsm.json'));
+  const correlations = new MemoryWorkflowCorrelationStore();
   try {
     const missingPublic = 'wf-aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
-    await withServer(store, missingPublic, requireSyntheticPayment, async (baseUrl) => {
+    await withServer(store, correlations, missingPublic, requireSyntheticPayment, async (baseUrl) => {
       const response = await fetch(`${baseUrl}${X402_PUBLIC_INSPECTION_PATH}`, { headers: { 'x-th-interop-test-payment': 'paid' } });
       assert.equal(response.status, 404);
       assert.deepEqual(await response.json(), { error: { code: 'RESOURCE_NOT_AVAILABLE', message: 'Public inspection resource is not available' } });

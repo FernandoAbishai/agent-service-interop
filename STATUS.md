@@ -4,7 +4,7 @@ _Last updated: 2026-09-06_
 
 ## Current stage
 
-**Experimental interoperability testbed through TH-INTEROP-19; protocol-hygiene and neutral-correlation gates next**
+**Experimental interoperability testbed through TH-INTEROP-20 neutral-correlation gate**
 
 No production interoperability or protocol-certification claims are made.
 
@@ -45,7 +45,11 @@ No production interoperability or protocol-certification claims are made.
 - [x] Opt-in Circle Gateway live-test harness
 - [x] Explicit contract/version-status document separating upstream, experimental and historical artifacts
 - [ ] Runtime AIP validation parity with every vendored upstream schema constraint
-- [ ] Protocol-neutral correlation/inspection from a workflow not originated by AIP
+- [x] Protocol-neutral workflow correlation stored separately from the operational FSM
+- [x] AIP session/offer IDs retained as protocol refs rather than shared workflow identity
+- [x] Operational requirement/quote/job IDs retained as operational refs
+- [x] Synthetic non-AIP operational origin exposed through the same A2A/HTTP inspection boundary
+- [x] `WorkflowInspection v0.3` reduced to references plus source-backed optional facets
 - [x] Canonical fixture/runtime projection validation against `service-workflow.schema.json`
 - [ ] OpenAPI contract/runtime validation
 - [ ] Write-side idempotency/replay/precondition semantics
@@ -80,7 +84,8 @@ No production interoperability or protocol-certification claims are made.
 | `accepted_as`, `offered_via`, and `converted_from` are stable canonical relationships | Not yet supported as a package; documented as candidates/deferred semantics only |
 | One useful normalized core can survive multiple operational systems | Supported at the observation layer by ServiceTitan-shaped Appointment and live Jobber Visit mappings; canonical-schema promotion remains withheld |
 | Existing real business workflows can remain authoritative while becoming agent-accessible | Supported for the current read-only Jobber path; production mutation authority remains untested |
-| Shared workflow correlation is protocol-neutral | Not yet supported; current workflow identity/inspection is still AIP-origin coupled |
+| Shared workflow correlation can be independent from AIP identity | Initial support: correlation is interop-owned, AIP refs are protocol-specific, and a synthetic non-AIP origin traverses the same inspection path; second live origin remains untested |
+| `WorkflowInspection` requires quote/completion/customer-decision semantics for every source | Rejected; v0.3 keeps facets optional and source-backed |
 | x402 payment for the public inspection resource equals payment/authorization for plumbing work | Rejected; payment is scoped to the digital inspection resource only |
 | Adapter/interoperability infrastructure is a meaningful deployment wedge | Working hypothesis, not a fact |
 
@@ -119,6 +124,14 @@ Pinned to **AIP v0.1.0 / 2026-02-27**. The conformance suite checks the generate
 ### A2A
 
 Uses **A2A Protocol v1.0** through official `@a2a-js/sdk@1.0.1`, with one HTTP+JSON interface and one read-only `inspect_service_workflow` skill.
+
+### TH-INTEROP-20 neutral correlation
+
+`workflow_id` is now a repository-local interoperability correlation identifier stored outside the operational file-FSM state. A correlation record contains only `operational_refs` and `protocol_refs`; it does not carry authoritative workflow status, customer PII, authorization, or ownership semantics.
+
+The shared `WorkflowInspection v0.3` contract requires only correlation/reference structure and permits source-backed facets to be absent. The current file-FSM observer supplies quote/job state because those fields actually exist in the source. A separate synthetic provider-native test supplies only a job facet and no AIP refs, proving the A2A/HTTP projection does not structurally depend on AIP or invented missing semantics.
+
+Historical `wf-{aip_session_id}` lookups remain read-only compatibility for pre-TH-INTEROP-20 file state. New correlation records do not use that identity rule.
 
 ### ServiceTitan-shaped second system
 
@@ -161,7 +174,7 @@ Do **not** migrate `Occurrence` into `service-workflow.schema.json` automaticall
 
 The observation vocabulary has now earned stronger evidence: one ServiceTitan-shaped operational model and one real Jobber API model map into it without invented lifecycle, schedule, completion, or customer-acceptance semantics. The next architectural decision is whether that is sufficient for canonical-schema promotion or whether a second live operational source should be required first.
 
-Before adding another protocol or enlarging the canonical schema, the highest-value implementation gate is to remove the accidental AIP origin dependency from shared correlation/inspection and prove the same boundary with a workflow originated outside AIP. In parallel, runtime AIP validation, idempotency/replay behavior, and schema/OpenAPI contract checks should be hardened.
+The accidental AIP-origin dependency in shared correlation/inspection has now been removed at the synthetic architecture level. The next stronger falsifier is a second live operational origin using the same correlation/reference separation without invented facets. In parallel, runtime AIP validation, idempotency/replay behavior, provenance, and OpenAPI contract checks should be hardened.
 
 After that, test another live connectivity path while preserving Jobber as the control condition: either a direct second operational API or an integration substrate such as Agave. The question is whether outsourced connectivity preserves source identity, authority, provenance, occurrence boundaries, and native state well enough that TriHerm does not need to build every adapter directly.
 

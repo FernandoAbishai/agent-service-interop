@@ -25,7 +25,7 @@ The scope remains deliberately narrow: **one plumbing workflow, AIP + A2A cross-
 ```text
 AIP buyer flow --------------------+
                                    |
-A2A provider-agent inspection -----+--> normalized interoperability view
+A2A provider-agent inspection -----+--> interop correlation + read-only facets
                                              |
                                              v
                                    existing business workflow
@@ -84,17 +84,22 @@ Endpoints/surfaces:
 - HTTP+JSON A2A binding under `/a2a`
 - one skill: `inspect_service_workflow`
 
-The skill is deliberately read-only. It accepts an existing canonical workflow ID or AIP session ID and returns an A2A Artifact containing references to the same:
+The skill is deliberately read-only. It accepts only the repository-local, protocol-neutral `workflow_id`. That ID is an internal interoperability correlation key, not an AIP field or a proposed public identity standard. AIP session/offer IDs remain protocol references rather than alternate shared identities. The returned A2A Artifact contains:
 
-- canonical `workflow_id`;
-- `requirement_id`;
-- `quote_id`;
-- AIP `offer_id`;
-- operational `job_id`.
+- `workflow_id`, used only for interoperability correlation;
+- `operational_refs` identifying source-system objects such as requirement/quote/job records;
+- `protocol_refs` such as AIP session/offer IDs only when that workflow actually has an AIP representation;
+- source-backed optional facets. The current file-FSM observer exposes quote/job state, but does not synthesize completion or customer-decision state into the inspection contract.
+
+The correlation record is stored separately from the file-backed operational FSM. It does not become operational authority and does not carry customer PII or authoritative lifecycle state.
+
+The AIP response is intentionally not extended with a new `workflow_id` protocol field. How a private caller is entitled to discover or resolve an internal correlation ID is a separate authorization/disclosure question and is not solved by this experiment.
+
+`WorkflowInspection v0.3` is also intentionally narrower than the historical `service-workflow.schema.json`: the historical canonical fixture remains evidence from an earlier experiment, while shared inspection now carries only correlation references and the facets a source actually exposes.
 
 The A2A Task has its own ID and context. It is not the FSM job. A completed read-only A2A Task means the provider-agent interaction completed; it does **not** mean the physical service job completed or that the customer accepted fulfillment.
 
-This distinction is executable in the tests: the A2A Task can be `TASK_STATE_COMPLETED` while the authoritative FSM job remains `scheduled`, completion remains `not_claimed`, and customer decision remains `pending`.
+This distinction is executable in the tests: the A2A Task can be `TASK_STATE_COMPLETED` while the authoritative FSM job remains `scheduled`. The inspection contract no longer invents completion or customer-decision facets when the underlying source does not expose them.
 
 ## Run locally
 
@@ -108,7 +113,7 @@ npm run start:a2a  # A2A server, default port 3001
 npm run start:x402 # fixed public synthetic x402 inspection, default port 3002
 ```
 
-The AIP and A2A servers use the same `.runtime/fsm-state.json` by default, so an AIP-created workflow can be inspected through A2A without creating a second operational record. The x402 server also reads that state but exposes only the explicitly configured public synthetic workflow.
+The AIP, A2A and x402 processes share two distinct files by default: `.runtime/fsm-state.json` for the synthetic operational FSM and `.runtime/workflow-correlations.json` for interoperability correlation/reference data. Keeping these separate is deliberate: correlation does not take authority over the operational record.
 
 `npm test` is deterministic and does not invoke live external systems. The opt-in Jobber and Circle Gateway checks remain separate as `npm run test:jobber-live` and `npm run test:circle-live`.
 
@@ -120,14 +125,18 @@ The AIP and A2A servers use the same `.runtime/fsm-state.json` by default, so an
 - projection of confirmed FSM state into the experimental canonical representation;
 - official A2A Agent Card discovery and HTTP+JSON client/server interaction;
 - one AIP-created workflow exposed through a second independent A2A surface;
-- AIP and A2A resolving to the same requirement/quote/job references;
+- a workflow correlation ID generated independently from the AIP session ID and persisted outside the operational FSM;
+- AIP session/offer IDs retained only as protocol references;
+- operational requirement/quote/job IDs retained only as operational references;
+- one synthetic provider-native workflow with no AIP origin traversing the same correlation -> observation -> A2A/HTTP path;
+- missing facets staying missing instead of requiring synthetic quote/completion/customer-decision state;
 - A2A Task/context identity remaining separate from the physical FSM Job identity;
 - A2A Task state remaining semantically separate from physical-service Job state;
 - read-only A2A inspection not mutating the file-backed FSM;
 - ServiceTitan-shaped Appointment and real Jobber Visit evidence for the narrow `OccurrenceObservation` vocabulary;
 - a fixed public synthetic HTTP inspection resource protected by deterministic x402 gating, plus an opt-in Circle Gateway live harness.
 
-These results include a real **read-only Jobber API observation path**, but they do not yet demonstrate safe production writes, a second live operational system, or protocol-neutral workflow origination. The current shared `WorkflowInspection` still starts from an AIP-originated synthetic FSM record, and the canonical workflow ID is mechanically derived from the AIP session ID; neutral correlation is a remaining falsifier.
+These results include a real **read-only Jobber API observation path** and an initial synthetic falsifier for protocol-neutral correlation. They do not yet demonstrate safe production writes, a second live operational origin, global workflow identity, or cross-party identity resolution.
 
 ## Evidence backbone
 
@@ -153,9 +162,9 @@ These are version-sensitive and must be rechecked before implementation changes:
 
 ## Current pass / remaining falsification
 
-The repository now has executable evidence that **one AIP-originated synthetic plumbing workflow can support independent AIP, A2A and HTTP/x402 views without protocol-specific copies of the quote/job state**, plus read-only cross-system observation evidence from ServiceTitan-shaped data and Jobber.
+The repository now has executable evidence that **one AIP-originated synthetic plumbing workflow can support independent AIP, A2A and HTTP/x402 views without protocol-specific copies of the operational state**, plus read-only cross-system observation evidence from ServiceTitan-shaped data and Jobber.
 
-This does **not** yet prove that the shared correlation/inspection layer is protocol-neutral: the current canonical workflow ID is derived from the AIP session and the inspection payload retains an AIP offer reference. A high-priority next falsifier is to originate state outside AIP and expose it through the same neutral correlation/inspection boundary.
+The TH-INTEROP-20 synthetic falsifier additionally shows that the shared inspection path no longer structurally requires an AIP-origin workflow: correlation is stored separately from the operational FSM, AIP IDs are protocol refs only, and a provider-native synthetic source can expose only the job facet it actually has. The stronger next falsifier is the same separation against another live operational origin.
 
 The broader deployment thesis is still unproven. It should be revised or narrowed if any of these occur:
 

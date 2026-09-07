@@ -2,7 +2,8 @@ import express, { type Express, type RequestHandler } from 'express';
 import { resolve } from 'node:path';
 import { createGatewayMiddleware } from '@circle-fin/x402-batching/server';
 import { FileFsmStore } from './fsm-store.ts';
-import { projectWorkflowInspection } from './workflow-inspection.ts';
+import { FileWorkflowCorrelationStore } from './workflow-correlation.ts';
+import { FileFsmWorkflowInspectionSource, projectWorkflowInspection, type WorkflowInspectionSource } from './workflow-inspection.ts';
 
 export const CIRCLE_GATEWAY_TESTNET_URL = 'https://gateway-api-testnet.circle.com';
 export const DEFAULT_X402_INSPECTION_PRICE = '$0.001';
@@ -30,7 +31,7 @@ function resourceNotAvailable(res: Parameters<RequestHandler>[1]): void {
 
 function assertPublicWorkflowId(workflowId: string): void {
   if (!workflowId.startsWith('wf-') || workflowId.length <= 3) {
-    throw new Error('publicWorkflowId must be an explicit canonical workflow ID beginning with wf-');
+    throw new Error('publicWorkflowId must be an explicit interoperability workflow ID beginning with wf-');
   }
 }
 
@@ -71,7 +72,7 @@ export function createCircleGatewayPaymentGate(config: CircleGatewayPaymentConfi
  * therefore authorize only this digital resource invocation; it cannot be used
  * to probe, select, or authorize access to arbitrary/private workflows.
  */
-export function createPaidInspectionApp(store: FileFsmStore, options: PaidInspectionOptions): Express {
+export function createPaidInspectionApp(source: WorkflowInspectionSource, options: PaidInspectionOptions): Express {
   assertPublicWorkflowId(options.publicWorkflowId);
 
   const app = express();
@@ -84,7 +85,7 @@ export function createPaidInspectionApp(store: FileFsmStore, options: PaidInspec
     X402_PUBLIC_INSPECTION_PATH,
     options.paymentGate,
     (_req, res) => {
-      const inspection = projectWorkflowInspection(store, options.publicWorkflowId);
+      const inspection = projectWorkflowInspection(source, options.publicWorkflowId);
       if (!inspection) {
         resourceNotAvailable(res);
         return;
@@ -110,9 +111,12 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   const port = Number(process.env.X402_PORT ?? 3002);
   const host = process.env.X402_HOST ?? '127.0.0.1';
   const statePath = resolve(process.env.FSM_STATE_PATH ?? '.runtime/fsm-state.json');
+  const correlationPath = resolve(process.env.WORKFLOW_CORRELATION_PATH ?? '.runtime/workflow-correlations.json');
   const store = new FileFsmStore(statePath);
+  const correlations = new FileWorkflowCorrelationStore(correlationPath);
+  const source = new FileFsmWorkflowInspectionSource(store, correlations);
 
-  if (!projectWorkflowInspection(store, publicWorkflowId)) {
+  if (!projectWorkflowInspection(source, publicWorkflowId)) {
     throw new Error(`Configured public workflow ${publicWorkflowId} does not exist in the current FSM state`);
   }
 
@@ -121,7 +125,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     price: process.env.X402_INSPECTION_PRICE ?? DEFAULT_X402_INSPECTION_PRICE,
     facilitatorUrl: process.env.X402_FACILITATOR_URL ?? CIRCLE_GATEWAY_TESTNET_URL
   });
-  const app = createPaidInspectionApp(store, { publicWorkflowId, paymentGate });
+  const app = createPaidInspectionApp(source, { publicWorkflowId, paymentGate });
 
   app.listen(port, host, () => {
     console.log(`agent-service-interop x402 public inspection listening on http://${host}:${port}`);
@@ -130,5 +134,6 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     console.log(`price per inspection: ${process.env.X402_INSPECTION_PRICE ?? DEFAULT_X402_INSPECTION_PRICE}`);
     console.log(`Circle Gateway facilitator: ${process.env.X402_FACILITATOR_URL ?? CIRCLE_GATEWAY_TESTNET_URL}`);
     console.log(`shared file-backed FSM state: ${statePath}`);
+    console.log(`interop correlation state: ${correlationPath}`);
   });
 }

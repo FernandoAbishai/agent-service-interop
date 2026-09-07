@@ -4,14 +4,15 @@ import { agentCardHandler, restHandler, UserBuilder } from '@a2a-js/sdk/server/e
 import { resolve } from 'node:path';
 import { FileFsmStore } from './fsm-store.ts';
 import { createA2ARequestHandler } from './a2a-agent.ts';
-import { projectWorkflowInspection } from './workflow-inspection.ts';
+import { FileWorkflowCorrelationStore } from './workflow-correlation.ts';
+import { FileFsmWorkflowInspectionSource, projectWorkflowInspection, type WorkflowInspectionSource } from './workflow-inspection.ts';
 
-export function createA2AApp(baseUrl: string, store: FileFsmStore): Express {
-  const requestHandler = createA2ARequestHandler(baseUrl, store);
+export function createA2AApp(baseUrl: string, source: WorkflowInspectionSource): Express {
+  const requestHandler = createA2ARequestHandler(baseUrl, source);
   const app = express();
 
   app.get('/api/interop/workflows/:workflowId/inspection', (req, res) => {
-    const inspection = projectWorkflowInspection(store, req.params.workflowId);
+    const inspection = projectWorkflowInspection(source, req.params.workflowId);
     if (!inspection) {
       res.status(404).json({
         error: {
@@ -35,8 +36,11 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   const configuredBaseUrl = process.env.A2A_PUBLIC_BASE_URL?.replace(/\/$/, '');
   const baseUrl = configuredBaseUrl ?? `http://${host}:${port}`;
   const statePath = resolve(process.env.FSM_STATE_PATH ?? '.runtime/fsm-state.json');
+  const correlationPath = resolve(process.env.WORKFLOW_CORRELATION_PATH ?? '.runtime/workflow-correlations.json');
   const store = new FileFsmStore(statePath);
-  const app = createA2AApp(baseUrl, store);
+  const correlations = new FileWorkflowCorrelationStore(correlationPath);
+  const source = new FileFsmWorkflowInspectionSource(store, correlations);
+  const app = createA2AApp(baseUrl, source);
 
   app.listen(port, host, () => {
     console.log(`agent-service-interop provider surfaces listening on ${baseUrl}`);
@@ -44,5 +48,6 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     console.log(`A2A HTTP+JSON binding: ${baseUrl}/a2a`);
     console.log(`read-only inspection: ${baseUrl}/api/interop/workflows/{workflow_id}/inspection`);
     console.log(`shared file-backed FSM state: ${statePath}`);
+    console.log(`interop correlation state: ${correlationPath}`);
   });
 }

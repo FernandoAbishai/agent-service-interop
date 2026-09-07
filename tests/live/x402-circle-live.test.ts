@@ -10,6 +10,8 @@ import { FileFsmStore } from '../../src/fsm-store.ts';
 import { PlumbingAipAdapter } from '../../src/aip-adapter.ts';
 import { toCanonicalWorkflow } from '../../src/canonical.ts';
 import { createCircleGatewayPaymentGate, createPaidInspectionApp, DEFAULT_X402_INSPECTION_PRICE } from '../../src/x402-server.ts';
+import { MemoryWorkflowCorrelationStore } from '../../src/workflow-correlation.ts';
+import { FileFsmWorkflowInspectionSource } from '../../src/workflow-inspection.ts';
 
 const LIVE = process.env.CIRCLE_GATEWAY_LIVE === '1';
 
@@ -23,14 +25,16 @@ async function freePort(): Promise<number> {
   return port;
 }
 
-function seedPublicSyntheticWorkflow(store: FileFsmStore) {
+function seedPublicSyntheticWorkflow(store: FileFsmStore, correlations: MemoryWorkflowCorrelationStore) {
   const sessionId = '97a606b6-86f3-4b6c-8e12-a4db917802ba';
   const ids = [randomUUID(), randomUUID(), randomUUID(), randomUUID()];
   let index = 0;
   const adapter = new PlumbingAipAdapter({
     store,
+    correlations,
     now: () => new Date('2026-08-18T23:00:00.000Z'),
-    idFactory: () => ids[index++] ?? randomUUID()
+    idFactory: () => ids[index++] ?? randomUUID(),
+    workflowIdFactory: randomUUID
   });
 
   const offer = adapter.submit({
@@ -72,7 +76,9 @@ function seedPublicSyntheticWorkflow(store: FileFsmStore) {
 
   const session = store.getBySession(sessionId);
   assert.ok(session);
-  return toCanonicalWorkflow(session);
+  const correlation = correlations.findByProtocolRef('AIP', 'session', sessionId);
+  assert.ok(correlation);
+  return toCanonicalWorkflow(session, correlation.workflow_id);
 }
 
 test('Circle Gateway live: real 402 -> nanopayment -> public resource with zero FSM mutation', { skip: !LIVE }, async () => {
@@ -88,15 +94,16 @@ test('Circle Gateway live: real 402 -> nanopayment -> public resource with zero 
 
   const dir = mkdtempSync(join(tmpdir(), 'agent-service-interop-circle-live-'));
   const store = new FileFsmStore(join(dir, 'fsm.json'));
+  const correlations = new MemoryWorkflowCorrelationStore();
 
   try {
-    const workflow = seedPublicSyntheticWorkflow(store);
+    const workflow = seedPublicSyntheticWorkflow(store, correlations);
     const before = structuredClone(store.read());
     const balancesBefore = await client.getBalances();
     assert.ok(balancesBefore.gateway.available > 0n, 'buyer Gateway balance must be pre-funded; this test never deposits automatically');
 
     const port = await freePort();
-    const app = createPaidInspectionApp(store, {
+    const app = createPaidInspectionApp(new FileFsmWorkflowInspectionSource(store, correlations), {
       publicWorkflowId: workflow.workflow_id,
       paymentGate: createCircleGatewayPaymentGate({
         sellerAddress,
@@ -117,9 +124,11 @@ test('Circle Gateway live: real 402 -> nanopayment -> public resource with zero 
       const { data, status } = await client.pay(url);
       assert.equal(status, 200);
       const body = data as any;
-      assert.equal(body.references.canonical_workflow_id, workflow.workflow_id);
-      assert.equal(body.references.operational_job_id, workflow.job.job_id);
-      assert.equal(body.observed_state.job_status, 'scheduled');
+      assert.equal(body.references.workflow_id, workflow.workflow_id);
+      assert.ok(body.references.operational_refs.some((ref: any) =>
+        ref.object_type === 'job' && ref.id === workflow.job.job_id
+      ));
+      assert.equal(body.facets.job.status, 'scheduled');
       assert.ok(!('payer' in body));
       assert.ok(!('payment' in body));
       assert.ok(!('customer_id' in body));
