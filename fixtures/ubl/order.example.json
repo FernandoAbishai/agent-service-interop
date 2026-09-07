@@ -1,0 +1,8 @@
+{
+  "order_id": "ORDER-TRIHERM-001",
+  "quotation_id": "QUO-TRIHERM-001",
+  "buyer_party_id": "BUYER-SYNTHETIC-001",
+  "seller_party_id": "SELLER-SYNTHETIC-001",
+  "issue_date": "2026-08-16",
+  "note": "Synthetic parsed UBL 2.4-shaped Order projection used only to falsify universal Commitment equivalence."
+}

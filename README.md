@@ -16,6 +16,8 @@ See [`docs/protocol-thesis.md`](docs/protocol-thesis.md) for the pre-specificati
 
 The first executable kernel contract is [`schemas/triherm-kernel-envelope.schema.json`](schemas/triherm-kernel-envelope.schema.json), documented in [`docs/protocol-kernel-v0.1-experimental.md`](docs/protocol-kernel-v0.1-experimental.md). It is deliberately structural and experimental: economic semantics remain profile-owned or deferred rather than becoming universal objects by default.
 
+The first post-kernel economic falsifier is [`research/th-interop-23-economic-interaction-boundary.md`](research/th-interop-23-economic-interaction-boundary.md): it earns only a thin `OfferResponseObservation` across AIP/UBL while explicitly leaving rich quote money/terms and generic Commitment unnormalized.
+
 ## What this repository is testing
 
 The experiment asks whether a small normalized interoperability layer can sit between:

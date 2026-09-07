@@ -1,0 +1,16 @@
+{
+  "quotation_id": "QUO-TRIHERM-001",
+  "rfq_id": "RFQ-TRIHERM-001",
+  "rfq_line_id": "1",
+  "quotation_line_id": "1",
+  "valid_until": "2026-08-22T23:59:59Z",
+  "line_items": [
+    {
+      "description": "Diagnostic visit",
+      "amount": "89.00"
+    }
+  ],
+  "total_amount": "89.00",
+  "currency": "USD",
+  "note": "Synthetic parsed UBL 2.4-shaped quotation projection for semantic falsification only; not XML/schema conformance evidence."
+}

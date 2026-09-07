@@ -1,6 +1,6 @@
 # Prior art and protocol boundaries
 
-_Last checked: 2026-08-14. This file is a research map, not a standards-status claim. Recheck primary sources before relying on any version-sensitive statement._
+_Last checked: 2026-09-07. This file is a research map, not a standards-status claim. Recheck primary sources before relying on any version-sensitive statement._
 
 ## Why this file exists
 
@@ -9,8 +9,8 @@ The project now has an explicit strategic objective to pursue a preferably unive
 | Project / standard | What it contributes | What this project should reuse | Boundary relevant to this experiment |
 |---|---|---|---|
 | Agent Intake Protocol (AIP) v0.1.0 | Agent-facing discovery, structured intake, offer/review/bind lifecycle | Discovery/intake/offer semantics and manifest shape | Does not by itself prove integration with a real field-service operating system |
-| Universal Commerce Protocol (UCP) | Commerce services, capabilities, payment handlers, discovery profile | Commerce vocabulary and compatible surfaces where semantically appropriate | UCP `Service` is an API-surface concept, not a generic list of a plumber's commercial services |
-| OASIS UBL 2.1 | Mature procurement documents including RFQ and Quotation | Quotation semantics, validity periods, procurement prior art | Enterprise document semantics need adaptation for agent-facing long-tail workflows |
+| Universal Commerce Protocol (UCP) v2026-08-25 | Commerce services/capabilities including shopping checkout and order, payment handlers, discovery profile | Commerce vocabulary and compatible surfaces where semantically appropriate | Capability-specific checkout/order semantics do not prove a generic cross-vertical Commitment lifecycle |
+| OASIS UBL 2.4 | Mature procurement documents including RFQ, Quotation, Order and Order Response | Quotation and ordering semantics, procurement prior art | UBL Ordering creates a buyer/seller contractual obligation; that must not be conflated with AIP Bind, booking, payment, or provider work authorization |
 | MCP | Tool/resource protocol; Tasks for durable/asynchronous operations | Tool execution and async-operation mechanics | Does not define the economic semantics of whether physical work was satisfactorily completed |
 | Agent2Agent (A2A) | Agent-to-agent communication and Agent Cards | Future cross-agent surface | Not the same protocol as ACP; this project should avoid conflating transport/governance with service-commerce semantics |
 | AP2 | Delegated payment/authorization patterns | Future authorization/settlement adapter concepts | Not the operational system where service work is executed |
@@ -22,8 +22,9 @@ The project now has an explicit strategic objective to pursue a preferably unive
 ## Primary sources
 
 - AIP whitepaper: https://agent-intake-protocol.github.io/agent-intake-protocol/whitepaper.html
-- UCP specification: https://ucp.dev/
-- UBL 2.1: https://docs.oasis-open.org/ubl/UBL-2.1.html
+- UCP v2026-08-25 specification: https://ucp.dev/2026-08-25/specification/overview/
+- UCP v2026-08-25 Order capability: https://ucp.dev/2026-08-25/specification/shopping/order/
+- UBL 2.4: https://docs.oasis-open.org/ubl/UBL-2.4.html
 - MCP specification: https://modelcontextprotocol.io/
 - A2A repository/specification: https://github.com/a2aproject/A2A
 - AP2: https://ap2.org/
@@ -50,9 +51,9 @@ AIP already provides a concrete agent-facing discovery/intake/offer/bind lifecyc
 
 UCP `Service` refers to a protocol/API surface. A business's commercial offering (for example, leak diagnosis or water-heater replacement) is a different concept and must be represented only through semantics that the relevant UCP version actually supports.
 
-### Versioned UCP namespace authority behavior
+### Versioned UCP behavior
 
-Do not encode a timeless rule from one UCP release. Record the exact UCP version/date used by any fixture. In the stable 2026-04-08 specification, both `spec` and `schema` authority behavior was stricter; the current draft changes the treatment of `spec` while retaining authority constraints around `schema`. Fixtures must state the target version.
+Do not encode a timeless rule from one UCP release. Record the exact UCP version/date used by any fixture or crosswalk. The current released version observed for this gate is `2026-08-25`; current documentation continues to use reverse-domain capability/service identifiers and capability-specific checkout/order semantics. Future releases may change governance or capability details, so TriHerm must not copy those mechanics into an unversioned kernel rule.
 
 ## Current working hypothesis
 
