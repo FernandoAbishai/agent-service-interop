@@ -105,18 +105,12 @@ export class FileFsmStore {
       if (session.binding) {
         if (session.binding.request_fingerprint === input.requestFingerprint) return session;
 
-        // Compatibility for bindings persisted before replay fingerprints existed.
         if (!session.binding.request_fingerprint) {
-          const bindKeys = Object.keys(input.request.bind_data);
-          const onlyLegacyKnownKeys = bindKeys.every((key) => ['full_name', 'phone', 'address', 'email'].includes(key));
-          const sameKnownData =
-            session.quote.offer_id === input.request.offer_id &&
-            session.agent_id === input.request.agent.id &&
-            session.binding.full_name === input.request.bind_data.full_name &&
-            session.binding.phone === input.request.bind_data.phone &&
-            session.binding.email === input.request.bind_data.email &&
-            JSON.stringify(session.binding.address) === JSON.stringify(input.request.bind_data.address);
-          if (onlyLegacyKnownKeys && sameKnownData) return session;
+          throw new ValidationError(
+            'IDEMPOTENCY_CONFLICT',
+            'Legacy binding has no replay fingerprint, so exact Bind replay cannot be proven',
+            409
+          );
         }
 
         throw new ValidationError(

@@ -32,7 +32,7 @@ The Bind replay identity is:
 
 Bind metadata and consent-scope presentation are validated but excluded from the replay fingerprint. Exact replay returns the first confirmed result, including the original `bound_at` / `scheduled_for`, even if the offer would be expired at retry time. Changed bind data returns `409 IDEMPOTENCY_CONFLICT` without rescheduling or overwriting persisted PII.
 
-New synthetic bindings retain only the opaque Bind request fingerprint alongside the binding record so exact replay can be recognized after restart. It is adapter-local replay metadata, not a canonical field, correlation reference, authorization proof, or source-business identifier. Legacy bindings without that fingerprint use a deliberately conservative compatibility comparison and do not guess about unknown historical extension fields.
+New synthetic bindings retain only the opaque Bind request fingerprint alongside the binding record so exact replay can be recognized after restart. It is adapter-local replay metadata, not a canonical field, correlation reference, authorization proof, or source-business identifier. Legacy bindings without that fingerprint fail closed with `409 IDEMPOTENCY_CONFLICT`: the historical store did not preserve upstream extension fields, so exact semantic replay cannot be proven safely.
 
 The synthetic `+3 days` scheduling policy is deliberately unchanged by this gate.
 

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { existsSync, mkdtempSync, rmSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { randomUUID } from 'node:crypto';
@@ -504,6 +504,99 @@ test('replay journal preserves original intake semantics across correlation-firs
       correlations.findByProtocolRef('AIP', 'session', SESSION)?.workflow_id,
       reservedCorrelation.workflow_id
     );
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('correlation-only recovery fails closed when the replay reservation was not durable', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'agent-service-interop-correlation-only-recovery-'));
+  const fsmPath = join(dir, 'fsm.json');
+  const correlationPath = join(dir, 'correlations.json');
+
+  class FailOnceFsmStore extends FileFsmStore {
+    private fail = true;
+
+    override upsertOffer(input: Parameters<FileFsmStore['upsertOffer']>[0]) {
+      if (this.fail) {
+        this.fail = false;
+        throw new Error('injected FSM write failure');
+      }
+      return super.upsertOffer(input);
+    }
+  }
+
+  try {
+    const correlations = new FileWorkflowCorrelationStore(correlationPath);
+    const firstAdapter = new PlumbingAipAdapter({
+      store: new FailOnceFsmStore(fsmPath),
+      correlations,
+      replays: new MemoryAipReplayStore(),
+      now: () => new Date('2026-08-14T22:30:00.000Z'),
+      workflowIdFactory: () => 'memory-replay-recovery'
+    });
+
+    assert.throws(
+      () => firstAdapter.submit(intake(), 'https://adapter.example'),
+      /injected FSM write failure/
+    );
+    assert.ok(correlations.findByProtocolRef('AIP', 'session', SESSION));
+    assert.equal(new FileFsmStore(fsmPath).getBySession(SESSION), undefined);
+
+    const restartedAdapter = new PlumbingAipAdapter({
+      store: new FileFsmStore(fsmPath),
+      correlations: new FileWorkflowCorrelationStore(correlationPath),
+      replays: new MemoryAipReplayStore(),
+      now: () => new Date('2026-08-14T22:31:00.000Z')
+    });
+
+    assert.throws(
+      () => restartedAdapter.submit(intake(), 'https://adapter.example'),
+      (error: any) => error?.code === 'IDEMPOTENCY_CONFLICT' && error?.httpStatus === 409
+    );
+    assert.equal(new FileFsmStore(fsmPath).getBySession(SESSION), undefined);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('legacy fingerprint-less Bind replay fails closed instead of guessing historical extensions', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'agent-service-interop-legacy-bind-replay-'));
+  const statePath = join(dir, 'fsm.json');
+  const store = new FileFsmStore(statePath);
+  const adapter = new PlumbingAipAdapter({ store, now: () => new Date('2026-08-14T22:30:00.000Z') });
+
+  try {
+    const offer = adapter.submit(intake(), 'https://adapter.example').offer;
+    const originalBind = {
+      offer_id: offer.id,
+      session_id: SESSION,
+      bind_data: {
+        full_name: 'Jane Fixture',
+        phone: '+1-555-0100',
+        address: ADDRESS,
+        provider_extension: { ticket: 'historical-ext-001' }
+      },
+      agent: { id: 'fixture-agent-001', consent_scope: ['intake', 'offer', 'bind'] }
+    };
+    adapter.bind(originalBind);
+    const before = structuredClone(store.getBySession(SESSION));
+    assert.ok(before?.binding?.request_fingerprint);
+
+    const raw = JSON.parse(readFileSync(statePath, 'utf8')) as any;
+    delete raw.sessions[SESSION].binding.request_fingerprint;
+    writeFileSync(statePath, `${JSON.stringify(raw, null, 2)}\n`, 'utf8');
+
+    const restarted = new PlumbingAipAdapter({ store: new FileFsmStore(statePath) });
+    const replay = structuredClone(originalBind) as any;
+    delete replay.bind_data.provider_extension;
+    assert.throws(
+      () => restarted.bind(replay),
+      (error: any) => error?.code === 'IDEMPOTENCY_CONFLICT' && error?.httpStatus === 409
+    );
+    const after = new FileFsmStore(statePath).getBySession(SESSION);
+    assert.equal(after?.job.scheduled_for, before?.job.scheduled_for);
+    assert.equal(after?.binding?.phone, before?.binding?.phone);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }

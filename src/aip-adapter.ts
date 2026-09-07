@@ -199,17 +199,11 @@ export class PlumbingAipAdapter {
     }
 
     if (existingCorrelation) {
-      const ids = this.idsFromCorrelation(existingCorrelation);
-      return {
-        session_id: sessionId,
-        request_fingerprint: requestFingerprint,
-        workflow_id: existingCorrelation.workflow_id,
-        offer_id: ids.offerId,
-        requirement_id: ids.requirementId,
-        quote_id: ids.quoteId,
-        job_id: ids.jobId,
-        valid_until: new Date(this.now().getTime() + 7 * 24 * 60 * 60 * 1000).toISOString()
-      };
+      throw new ValidationError(
+        'IDEMPOTENCY_CONFLICT',
+        'AIP correlation exists without operational state and no matching replay reservation was found',
+        409
+      );
     }
 
     return {
