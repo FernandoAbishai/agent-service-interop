@@ -14,6 +14,8 @@ This repository starts with a residential plumbing workflow and treats existing 
 
 See [`docs/protocol-thesis.md`](docs/protocol-thesis.md) for the pre-specification thesis, candidate kernel, invariants, and evidence gates.
 
+The first executable kernel contract is [`schemas/triherm-kernel-envelope.schema.json`](schemas/triherm-kernel-envelope.schema.json), documented in [`docs/protocol-kernel-v0.1-experimental.md`](docs/protocol-kernel-v0.1-experimental.md). It is deliberately structural and experimental: economic semantics remain profile-owned or deferred rather than becoming universal objects by default.
+
 ## What this repository is testing
 
 The experiment asks whether a small normalized interoperability layer can sit between:

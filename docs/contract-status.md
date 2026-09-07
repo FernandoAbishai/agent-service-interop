@@ -22,6 +22,7 @@ External versions are inputs to an experiment, not versions of a repository-loca
 | Artifact | Version/status | Meaning |
 |---|---|---|
 | `schemas/service-workflow.schema.json` | `0.1.0-experimental` | Historical executable translation model; not the minimal interoperability core |
+| `schemas/triherm-kernel-envelope.schema.json` | `0.1.0-experimental` | Minimal pre-specification coordination envelope: profile/version, actors, typed refs/correlation, authority, provenance, capabilities/extensions, and profile-owned payload; not a stable/normative protocol release |
 | `openapi.yaml` | `0.3.0-experimental` | Description of experimental read-only inspection surfaces; v0.3 separates correlation refs from optional source-backed facets |
 | `ServiceRequestObservation` | earned observation-layer vocabulary | Narrow AIP/UBL service-request facet; not canonical protocol state |
 | `OccurrenceObservation` | earned observation-layer vocabulary | Cross-system Appointment/Visit observation used by ServiceTitan-shaped and Jobber mappings; no normalized lifecycle |
@@ -29,7 +30,11 @@ External versions are inputs to an experiment, not versions of a repository-loca
 
 The v0.3 `workflow_id` is repository-local/internal correlation. It is not added to AIP as a protocol field, and this repository does not yet define private correlation discovery or entitlement semantics.
 
-These local contracts may provide evidence for a future protocol kernel, but none becomes normative merely by being repository-local or versioned as experimental.
+These local contracts are experimental evidence toward a future stable protocol, but none becomes normative merely by being repository-local or versioned as experimental.
+
+The v0.1 experimental kernel is intentionally structural. Its `payload` is profile-owned, and the kernel does not define Intent, Offer, Commitment, Job/Task, Occurrence, Evidence, Decision, authorization/delegation, or Settlement lifecycle semantics. `actor_ref` is envelope-local rather than a global identity, and `authority` is attribution metadata rather than proof of authentication or permission to mutate a source.
+
+The kernel's optional `correlation_id` is an opaque experimental coordination token. The repository's current internal `workflow_id` is not automatically its canonical protocol value, and v0.1 does not define global correlation discovery or uniqueness semantics.
 
 Historical canonical projection requires that correlation ID explicitly; there is no current implicit `wf-{aip_session_id}` identity default. The only AIP-derived workflow lookup retained is the narrowly scoped read compatibility path for genuinely pre-correlation state.
 

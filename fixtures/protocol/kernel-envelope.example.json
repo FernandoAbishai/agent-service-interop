@@ -1,0 +1,67 @@
+{
+  "kernel_version": "0.1.0-experimental",
+  "profile": {
+    "id": "interop.reference-set",
+    "version": "0.1.0-experimental"
+  },
+  "message_id": "msg-kernel-example-001",
+  "correlation": {
+    "correlation_id": "corr-kernel-example-001",
+    "reference_ids": [
+      "ref-aip-session",
+      "ref-provider-job"
+    ]
+  },
+  "actors": [
+    {
+      "actor_ref": "actor-provider",
+      "role": "provider"
+    },
+    {
+      "actor_ref": "actor-adapter",
+      "role": "producer"
+    }
+  ],
+  "references": [
+    {
+      "ref_id": "ref-aip-session",
+      "kind": "protocol",
+      "protocol": "AIP",
+      "protocol_version": "0.1.0",
+      "object_type": "session",
+      "id": "37a606b6-86f3-4b6c-8e12-a4db917802ba"
+    },
+    {
+      "ref_id": "ref-provider-job",
+      "kind": "operational",
+      "system": "file_backed_fsm",
+      "object_type": "job",
+      "id": "job-44444444-4444-4444-8444-444444444444"
+    }
+  ],
+  "authority": [
+    {
+      "payload_pointer": "",
+      "actor_ref": "actor-provider",
+      "source_reference_ids": [
+        "ref-provider-job"
+      ]
+    }
+  ],
+  "provenance": {
+    "produced_at": "2026-09-07T08:45:00.000Z",
+    "producer_actor_ref": "actor-adapter",
+    "derived_from_reference_ids": [
+      "ref-aip-session",
+      "ref-provider-job"
+    ]
+  },
+  "capabilities": {
+    "required": [],
+    "optional": []
+  },
+  "extensions": {},
+  "payload": {
+    "profile_owned_example": true
+  }
+}
