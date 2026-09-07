@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { existsSync, mkdtempSync, rmSync, utimesSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, utimesSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { randomUUID } from 'node:crypto';
@@ -9,6 +9,16 @@ import { FileFsmStore } from '../src/fsm-store.ts';
 import { FileWorkflowCorrelationStore } from '../src/workflow-correlation.ts';
 import { FileAipReplayStore } from '../src/aip-replay-store.ts';
 import { intakeReplayFingerprint } from '../src/idempotency.ts';
+
+
+async function waitUntil(predicate: () => boolean, timeoutMs = 2_000): Promise<void> {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    if (predicate()) return;
+    await new Promise((resolve) => setTimeout(resolve, 10));
+  }
+  throw new Error('timed out waiting for test condition');
+}
 
 function runNode(script: string, env: Record<string, string>): Promise<void> {
   return new Promise((resolve, reject) => {
@@ -108,28 +118,13 @@ test('concurrent correlation writers preserve every distinct workflow', async ()
   }
 });
 
-test('a crash-abandoned file lock is recovered after its lease is stale', async () => {
+test('an abandoned stale lock is recovered without manual repository cleanup', () => {
   const dir = mkdtempSync(join(tmpdir(), 'agent-service-interop-stale-lock-'));
   const statePath = join(dir, 'fsm.json');
-  const markerPath = join(dir, 'locked.marker');
-  const script = `
-    import { writeFileSync } from 'node:fs';
-    import { withFileLock } from './src/file-state.ts';
-    withFileLock(process.env.STATE_PATH, () => {
-      writeFileSync(process.env.MARKER_PATH, 'locked');
-      process.kill(process.pid, 'SIGKILL');
-    });
-  `;
+  const lockPath = `${statePath}.lock`;
 
   try {
-    await assert.rejects(
-      runNode(script, { STATE_PATH: statePath, MARKER_PATH: markerPath }),
-      /child exited/
-    );
-    assert.equal(existsSync(markerPath), true);
-    const lockPath = `${statePath}.lock`;
-    assert.equal(existsSync(lockPath), true, 'SIGKILL should leave the lock directory behind');
-
+    mkdirSync(lockPath);
     const old = new Date(Date.now() - 60_000);
     utimesSync(lockPath, old, old);
 
@@ -155,7 +150,57 @@ test('a crash-abandoned file lock is recovered after its lease is stale', async 
     });
 
     assert.equal(session.session_id, sessionId);
-    assert.equal(existsSync(lockPath), false, 'recovered lock should be released after the successful write');
+    assert.equal(existsSync(lockPath), false, 'stale lock should be replaced and released after the successful write');
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('a live owner keeps exclusivity while its synchronous critical section exceeds the stale lease', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'agent-service-interop-live-lock-'));
+  const statePath = join(dir, 'state.json');
+  const firstEntered = join(dir, 'first-entered');
+  const firstDone = join(dir, 'first-done');
+  const secondEntered = join(dir, 'second-entered');
+  const lockEnv = {
+    STATE_PATH: statePath,
+    THI_FILE_LOCK_STALE_MS: '5000',
+    THI_FILE_LOCK_UPDATE_MS: '1000'
+  };
+  const firstScript = `
+    import { writeFileSync } from 'node:fs';
+    import { withFileLock } from './src/file-state.ts';
+    const waiter = new Int32Array(new SharedArrayBuffer(4));
+    withFileLock(process.env.STATE_PATH, () => {
+      writeFileSync(process.env.FIRST_ENTERED, String(Date.now()));
+      Atomics.wait(waiter, 0, 0, 6500);
+      writeFileSync(process.env.FIRST_DONE, String(Date.now()));
+    });
+  `;
+  const secondScript = `
+    import { writeFileSync } from 'node:fs';
+    import { withFileLock } from './src/file-state.ts';
+    withFileLock(process.env.STATE_PATH, () => {
+      writeFileSync(process.env.SECOND_ENTERED, String(Date.now()));
+    });
+  `;
+
+  try {
+    const first = runNode(firstScript, {
+      ...lockEnv,
+      FIRST_ENTERED: firstEntered,
+      FIRST_DONE: firstDone
+    });
+    await waitUntil(() => existsSync(firstEntered));
+    const second = runNode(secondScript, {
+      ...lockEnv,
+      SECOND_ENTERED: secondEntered
+    });
+
+    await Promise.all([first, second]);
+    const firstDoneAt = Number(readFileSync(firstDone, 'utf8'));
+    const secondEnteredAt = Number(readFileSync(secondEntered, 'utf8'));
+    assert.ok(secondEnteredAt >= firstDoneAt, 'second writer must not stale-steal a lock from a live blocked owner');
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }

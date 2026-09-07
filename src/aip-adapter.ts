@@ -104,10 +104,24 @@ export class PlumbingAipAdapter {
     }
 
     const existingCorrelation = this.options.correlations?.findByProtocolRef('AIP', 'session', request.session_id);
+    if (existingSession && existingCorrelation) {
+      this.assertCorrelationMatchesPlan(existingCorrelation, {
+        session_id: request.session_id,
+        request_fingerprint: fingerprint,
+        workflow_id: existingCorrelation.workflow_id,
+        offer_id: existingSession.quote.offer_id,
+        requirement_id: existingSession.requirement.requirement_id,
+        quote_id: existingSession.quote.quote_id,
+        job_id: existingSession.job.job_id,
+        valid_until: existingSession.quote.valid_until
+      });
+    }
+
     const plan = this.replays.claim(request.session_id, fingerprint, () =>
       this.createReplayPlan(request.session_id, fingerprint, existingSession, existingCorrelation)
     );
 
+    if (existingSession) this.assertReplayPlanMatchesSession(plan, existingSession);
     this.ensureCorrelation(plan);
 
     const session = this.options.store.upsertOffer({
@@ -210,17 +224,60 @@ export class PlumbingAipAdapter {
     };
   }
 
+
+  private assertReplayPlanMatchesSession(plan: AipSubmitReplayPlan, session: FsmSession): void {
+    const matches =
+      plan.session_id === session.session_id &&
+      plan.offer_id === session.quote.offer_id &&
+      plan.requirement_id === session.requirement.requirement_id &&
+      plan.quote_id === session.quote.quote_id &&
+      plan.job_id === session.job.job_id &&
+      plan.valid_until === session.quote.valid_until;
+    if (matches) return;
+    throw new ValidationError(
+      'IDEMPOTENCY_CONFLICT',
+      'Persisted AIP replay references do not match operational state',
+      409
+    );
+  }
+
+  private correlationMatchesPlan(correlation: WorkflowCorrelation, plan: AipSubmitReplayPlan): boolean {
+    if (correlation.workflow_id !== plan.workflow_id) return false;
+
+    const operational = (objectType: string) => correlation.operational_refs.filter((candidate) =>
+      candidate.system === 'file_backed_fsm' && candidate.object_type === objectType
+    );
+    const protocol = (objectType: string) => correlation.protocol_refs.filter((candidate) =>
+      candidate.protocol === 'AIP' && candidate.object_type === objectType
+    );
+
+    const requirement = operational('requirement');
+    const quote = operational('quote');
+    const job = operational('job');
+    const session = protocol('session');
+    const offer = protocol('offer');
+
+    return requirement.length === 1 && requirement[0].id === plan.requirement_id &&
+      quote.length === 1 && quote[0].id === plan.quote_id &&
+      job.length === 1 && job[0].id === plan.job_id &&
+      session.length === 1 && session[0].id === plan.session_id &&
+      offer.length === 1 && offer[0].id === plan.offer_id;
+  }
+
+  private assertCorrelationMatchesPlan(correlation: WorkflowCorrelation, plan: AipSubmitReplayPlan): void {
+    if (this.correlationMatchesPlan(correlation, plan)) return;
+    throw new ValidationError(
+      'IDEMPOTENCY_CONFLICT',
+      'Persisted AIP correlation references do not match replay/operational state',
+      409
+    );
+  }
+
   private ensureCorrelation(plan: AipSubmitReplayPlan): void {
     if (!this.options.correlations) return;
     const existing = this.options.correlations.findByProtocolRef('AIP', 'session', plan.session_id);
     if (existing) {
-      if (existing.workflow_id !== plan.workflow_id) {
-        throw new ValidationError(
-          'IDEMPOTENCY_CONFLICT',
-          'AIP session is already associated with a different workflow correlation',
-          409
-        );
-      }
+      this.assertCorrelationMatchesPlan(existing, plan);
       return;
     }
 
@@ -239,7 +296,10 @@ export class PlumbingAipAdapter {
       });
     } catch (error) {
       const winner = this.options.correlations.findByProtocolRef('AIP', 'session', plan.session_id);
-      if (winner?.workflow_id === plan.workflow_id) return;
+      if (winner) {
+        this.assertCorrelationMatchesPlan(winner, plan);
+        return;
+      }
       throw error;
     }
   }

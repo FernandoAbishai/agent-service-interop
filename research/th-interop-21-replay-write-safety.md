@@ -32,6 +32,8 @@ The Bind replay identity is:
 
 Bind metadata and consent-scope presentation are validated but excluded from the replay fingerprint. Exact replay returns the first confirmed result, including the original `bound_at` / `scheduled_for`, even if the offer would be expired at retry time. Changed bind data returns `409 IDEMPOTENCY_CONFLICT` without rescheduling or overwriting persisted PII.
 
+New synthetic bindings retain only the opaque Bind request fingerprint alongside the binding record so exact replay can be recognized after restart. It is adapter-local replay metadata, not a canonical field, correlation reference, authorization proof, or source-business identifier. Legacy bindings without that fingerprint use a deliberately conservative compatibility comparison and do not guess about unknown historical extension fields.
+
 The synthetic `+3 days` scheduling policy is deliberately unchanged by this gate.
 
 ## Crash/recovery boundary
@@ -63,7 +65,7 @@ The file-backed FSM, correlation store, and AIP replay store use:
 
 Readers therefore see the prior complete JSON document or the next complete document, not an in-progress rewrite. Distinct concurrent writers are serialized so updates are not silently lost.
 
-Lock ownership uses an atomic lock-directory lease with periodic `mtime` updates. A lock is considered stale only after the configured lease window, allowing a process killed with `SIGKILL` to be recovered without immediately stealing an active writer's lock. Every writer uses the same stale/update configuration. This is local-filesystem coordination, not a distributed lock for network/object storage.
+Lock ownership uses `proper-lockfile` from a dedicated helper process. The helper owns and refreshes the lock-directory lease independently of the writer's synchronous JavaScript thread, so a long synchronous read/modify/write section cannot starve the lease heartbeat and be stale-stolen by another writer. The helper also releases when its parent writer exits; the stale lease remains the fallback for an abandoned helper lock. Acquisition and release waits are bounded. This is local-filesystem coordination, not a distributed lock for network/object storage.
 
 ## Evidence
 
@@ -76,10 +78,12 @@ Deterministic tests cover:
 - changed Bind -> 409 / no reschedule;
 - correlation-write failure leaving no new FSM state;
 - correlation-first/FSM-failure recovery with persisted semantic fingerprint;
+- legacy FSM/correlation or FSM/replay identifier divergence failing closed before re-correlation/mutation;
 - concurrent distinct FSM writers preserving every session;
 - readers not observing partial JSON during concurrent writes;
 - concurrent distinct correlation writers preserving every workflow.
-- crash-abandoned lock recovery after the lease becomes stale.
+- abandoned stale-lock recovery;
+- a live writer holding a synchronous critical section longer than the configured stale lease without losing exclusivity.
 
 ## Still unproven
 
