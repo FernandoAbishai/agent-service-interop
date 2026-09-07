@@ -76,6 +76,8 @@ export type FsmSession = {
     address: Address;
     email?: string;
     bound_at: string;
+    /** Adapter-local replay proof; not a protocol or operational identity. */
+    request_fingerprint?: string;
   };
 };
 

@@ -11,6 +11,7 @@ import { PlumbingAipAdapter } from '../../src/aip-adapter.ts';
 import { toCanonicalWorkflow } from '../../src/canonical.ts';
 import { createCircleGatewayPaymentGate, createPaidInspectionApp, DEFAULT_X402_INSPECTION_PRICE } from '../../src/x402-server.ts';
 import { MemoryWorkflowCorrelationStore } from '../../src/workflow-correlation.ts';
+import { MemoryAipReplayStore } from '../../src/aip-replay-store.ts';
 import { FileFsmWorkflowInspectionSource } from '../../src/workflow-inspection.ts';
 
 const LIVE = process.env.CIRCLE_GATEWAY_LIVE === '1';
@@ -32,6 +33,7 @@ function seedPublicSyntheticWorkflow(store: FileFsmStore, correlations: MemoryWo
   const adapter = new PlumbingAipAdapter({
     store,
     correlations,
+    replays: new MemoryAipReplayStore(),
     now: () => new Date('2026-08-18T23:00:00.000Z'),
     idFactory: () => ids[index++] ?? randomUUID(),
     workflowIdFactory: randomUUID

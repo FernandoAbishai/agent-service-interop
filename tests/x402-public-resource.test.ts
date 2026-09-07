@@ -11,6 +11,7 @@ import { PlumbingAipAdapter } from '../src/aip-adapter.ts';
 import { toCanonicalWorkflow } from '../src/canonical.ts';
 import { createPaidInspectionApp, X402_PUBLIC_INSPECTION_PATH } from '../src/x402-server.ts';
 import { MemoryWorkflowCorrelationStore } from '../src/workflow-correlation.ts';
+import { MemoryAipReplayStore } from '../src/aip-replay-store.ts';
 import { FileFsmWorkflowInspectionSource } from '../src/workflow-inspection.ts';
 
 async function freePort(): Promise<number> {
@@ -29,6 +30,7 @@ function seedWorkflow(store: FileFsmStore, correlations: MemoryWorkflowCorrelati
   const adapter = new PlumbingAipAdapter({
     store,
     correlations,
+    replays: new MemoryAipReplayStore(),
     now: () => new Date('2026-08-18T20:00:00.000Z'),
     idFactory: () => ids[index++] ?? randomUUID(),
     workflowIdFactory: randomUUID

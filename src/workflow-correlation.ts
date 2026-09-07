@@ -1,5 +1,5 @@
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { dirname } from 'node:path';
+import { readFileSync } from 'node:fs';
+import { atomicWriteJson, withFileLock } from './file-state.ts';
 
 export type OperationalReference = {
   system: string;
@@ -80,8 +80,7 @@ export class FileWorkflowCorrelationStore implements WorkflowCorrelationStore {
   }
 
   private write(state: CorrelationState): void {
-    mkdirSync(dirname(this.filePath), { recursive: true });
-    writeFileSync(this.filePath, `${JSON.stringify(state, null, 2)}\n`, 'utf8');
+    atomicWriteJson(this.filePath, state);
   }
 
   getByWorkflowId(workflowId: string): WorkflowCorrelation | undefined {
@@ -98,18 +97,20 @@ export class FileWorkflowCorrelationStore implements WorkflowCorrelationStore {
 
   put(correlation: WorkflowCorrelation): WorkflowCorrelation {
     assertCorrelationShape(correlation);
-    const state = this.read();
-    const existing = state.workflows[correlation.workflow_id];
-    if (existing) {
-      if (JSON.stringify(existing) !== JSON.stringify(correlation)) {
-        throw new Error(`workflow_id ${correlation.workflow_id} is already mapped to different references`);
+    return withFileLock(this.filePath, () => {
+      const state = this.read();
+      const existing = state.workflows[correlation.workflow_id];
+      if (existing) {
+        if (JSON.stringify(existing) !== JSON.stringify(correlation)) {
+          throw new Error(`workflow_id ${correlation.workflow_id} is already mapped to different references`);
+        }
+        return existing;
       }
-      return existing;
-    }
-    assertProtocolRefsUnclaimed(Object.values(state.workflows), correlation);
-    state.workflows[correlation.workflow_id] = correlation;
-    this.write(state);
-    return correlation;
+      assertProtocolRefsUnclaimed(Object.values(state.workflows), correlation);
+      state.workflows[correlation.workflow_id] = correlation;
+      this.write(state);
+      return correlation;
+    });
   }
 }
 

@@ -12,6 +12,7 @@ import { PlumbingAipAdapter } from '../src/aip-adapter.ts';
 import { toCanonicalWorkflow } from '../src/canonical.ts';
 import { createA2AApp } from '../src/a2a-server.ts';
 import { MemoryWorkflowCorrelationStore, type WorkflowCorrelation } from '../src/workflow-correlation.ts';
+import { MemoryAipReplayStore } from '../src/aip-replay-store.ts';
 import {
   CorrelatedWorkflowInspectionSource,
   FileFsmWorkflowInspectionSource,
@@ -42,6 +43,7 @@ function seedAcceptedAipWorkflow(store: FileFsmStore, correlations: MemoryWorkfl
   const adapter = new PlumbingAipAdapter({
     store,
     correlations,
+    replays: new MemoryAipReplayStore(),
     now: () => new Date('2026-08-15T07:00:00.000Z'),
     idFactory: () => ids[idCounter++] ?? randomUUID(),
     workflowIdFactory: () => '99999999-9999-4999-8999-999999999999'

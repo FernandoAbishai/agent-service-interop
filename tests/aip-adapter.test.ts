@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, rmSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { randomUUID } from 'node:crypto';
@@ -10,6 +10,9 @@ import { PlumbingAipAdapter } from '../src/aip-adapter.ts';
 import { createAipServer } from '../src/server.ts';
 import { assertCanonicalWorkflow, toCanonicalWorkflow } from '../src/canonical.ts';
 import { MemoryWorkflowCorrelationStore } from '../src/workflow-correlation.ts';
+import { FileWorkflowCorrelationStore } from '../src/workflow-correlation.ts';
+import { FileAipReplayStore, MemoryAipReplayStore } from '../src/aip-replay-store.ts';
+import { intakeReplayFingerprint } from '../src/idempotency.ts';
 
 const SESSION = '37a606b6-86f3-4b6c-8e12-a4db917802ba';
 const SECOND_SESSION = '71d6c362-5a87-4de5-a4e0-696cfcf14ed6';
@@ -331,6 +334,366 @@ test('repeated intake with the same session is idempotent for offer identity', a
   });
 });
 
+test('same session with changed semantic intake returns idempotency conflict without mutation', async () => {
+  await withServer(async ({ baseUrl, store }) => {
+    const first = await post(baseUrl, '/api/aip/residential-plumbing-quote', intake());
+    assert.equal(first.status, 200);
+    const before = structuredClone(store.getBySession(SESSION));
+
+    const changed: any = intake();
+    changed.intake_data.urgency = 'emergency';
+    const response = await post(baseUrl, '/api/aip/residential-plumbing-quote', changed);
+    assert.equal(response.status, 409);
+    const body = await response.json() as any;
+    assert.equal(body.error.code, 'IDEMPOTENCY_CONFLICT');
+    assert.deepEqual(store.getBySession(SESSION), before);
+  });
+});
+
+test('intake replay ignores validated non-state metadata and preserves the original offer', async () => {
+  await withServer(async ({ baseUrl, store }) => {
+    const firstRequest: any = intake();
+    firstRequest.metadata.timestamp = '2026-08-14T22:29:00.000Z';
+    const first = await post(baseUrl, '/api/aip/residential-plumbing-quote', firstRequest);
+    const firstBody = await first.json() as any;
+
+    const replay: any = intake();
+    replay.metadata.timestamp = '2026-08-14T22:30:00.000Z';
+    replay.metadata.experiment = 'retry';
+    const second = await post(baseUrl, '/api/aip/residential-plumbing-quote', replay);
+    const secondBody = await second.json() as any;
+
+    assert.equal(second.status, 200);
+    assert.equal(secondBody.offer.id, firstBody.offer.id);
+    assert.equal(store.getBySession(SESSION)?.quote.offer_id, firstBody.offer.id);
+  });
+});
+
+test('exact Bind replay returns the first result even after offer expiry', async () => {
+  await withServer(async ({ baseUrl, store, setNow }) => {
+    const offerResponse = await post(baseUrl, '/api/aip/residential-plumbing-quote', intake());
+    const offer = (await offerResponse.json() as any).offer;
+    const request = {
+      offer_id: offer.id,
+      session_id: SESSION,
+      bind_data: { full_name: 'Jane Fixture', phone: '+1-555-0100', address: ADDRESS },
+      agent: { id: 'fixture-agent-001', consent_scope: ['intake', 'offer', 'bind'] },
+      metadata: { user_confirmed_at: '2026-08-14T22:31:00.000Z' }
+    };
+
+    const first = await post(baseUrl, '/api/aip/bind', request);
+    assert.equal(first.status, 200);
+    const firstBody = await first.json();
+    const firstState = structuredClone(store.getBySession(SESSION));
+
+    setNow(new Date('2026-08-30T00:00:00.000Z'));
+    const replay = structuredClone(request) as any;
+    replay.metadata.user_confirmed_at = '2026-08-30T00:00:00.000Z';
+    const second = await post(baseUrl, '/api/aip/bind', replay);
+    assert.equal(second.status, 200);
+    assert.deepEqual(await second.json(), firstBody);
+    assert.deepEqual(store.getBySession(SESSION), firstState);
+  });
+});
+
+test('changed Bind replay returns idempotency conflict without rescheduling', async () => {
+  await withServer(async ({ baseUrl, store }) => {
+    const offerResponse = await post(baseUrl, '/api/aip/residential-plumbing-quote', intake());
+    const offer = (await offerResponse.json() as any).offer;
+    const original = {
+      offer_id: offer.id,
+      session_id: SESSION,
+      bind_data: { full_name: 'Jane Fixture', phone: '+1-555-0100', address: ADDRESS },
+      agent: { id: 'fixture-agent-001', consent_scope: ['intake', 'offer', 'bind'] }
+    };
+    assert.equal((await post(baseUrl, '/api/aip/bind', original)).status, 200);
+    const before = structuredClone(store.getBySession(SESSION));
+
+    const changed = structuredClone(original) as any;
+    changed.bind_data.phone = '+1-555-0199';
+    const response = await post(baseUrl, '/api/aip/bind', changed);
+    assert.equal(response.status, 409);
+    const body = await response.json() as any;
+    assert.equal(body.error.code, 'IDEMPOTENCY_CONFLICT');
+    assert.deepEqual(store.getBySession(SESSION), before);
+  });
+});
+
+test('correlation persistence failure cannot leave newly created FSM state behind', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'agent-service-interop-correlation-failure-'));
+  const store = new FileFsmStore(join(dir, 'fsm.json'));
+  const correlations = {
+    getByWorkflowId: () => undefined,
+    findByProtocolRef: () => undefined,
+    put: () => { throw new Error('injected correlation write failure'); }
+  };
+  const adapter = new PlumbingAipAdapter({ store, correlations, replays: new MemoryAipReplayStore() });
+
+  try {
+    assert.throws(
+      () => adapter.submit(intake(), 'https://adapter.example'),
+      /injected correlation write failure/
+    );
+    assert.equal(store.getBySession(SESSION), undefined);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('replay journal preserves original intake semantics across correlation-first recovery', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'agent-service-interop-replay-recovery-'));
+  const fsmPath = join(dir, 'fsm.json');
+  const correlationPath = join(dir, 'correlations.json');
+  const replayPath = join(dir, 'replays.json');
+
+  class FailOnceFsmStore extends FileFsmStore {
+    private fail = true;
+
+    override upsertOffer(input: Parameters<FileFsmStore['upsertOffer']>[0]) {
+      if (this.fail) {
+        this.fail = false;
+        throw new Error('injected FSM write failure');
+      }
+      return super.upsertOffer(input);
+    }
+  }
+
+  try {
+    const firstStore = new FailOnceFsmStore(fsmPath);
+    const correlations = new FileWorkflowCorrelationStore(correlationPath);
+    const replays = new FileAipReplayStore(replayPath);
+    const firstAdapter = new PlumbingAipAdapter({
+      store: firstStore,
+      correlations,
+      replays,
+      now: () => new Date('2026-08-14T22:30:00.000Z'),
+      idFactory: randomUUID,
+      workflowIdFactory: () => 'recovery-workflow'
+    });
+
+    assert.throws(
+      () => firstAdapter.submit(intake(), 'https://adapter.example'),
+      /injected FSM write failure/
+    );
+    assert.equal(firstStore.getBySession(SESSION), undefined);
+    const reservedCorrelation = correlations.findByProtocolRef('AIP', 'session', SESSION);
+    assert.ok(reservedCorrelation, 'correlation may exist while operational write is incomplete');
+
+    const restartedStore = new FileFsmStore(fsmPath);
+    const restartedAdapter = new PlumbingAipAdapter({
+      store: restartedStore,
+      correlations: new FileWorkflowCorrelationStore(correlationPath),
+      replays: new FileAipReplayStore(replayPath),
+      now: () => new Date('2026-08-14T22:31:00.000Z')
+    });
+
+    const changed: any = intake();
+    changed.intake_data.urgency = 'emergency';
+    assert.throws(
+      () => restartedAdapter.submit(changed, 'https://adapter.example'),
+      (error: any) => error?.code === 'IDEMPOTENCY_CONFLICT' && error?.httpStatus === 409
+    );
+    assert.equal(restartedStore.getBySession(SESSION), undefined, 'changed recovery must not claim the reserved correlation');
+
+    const recovered = restartedAdapter.submit(intake(), 'https://adapter.example');
+    const recoveredSession = restartedStore.getBySession(SESSION);
+    assert.ok(recoveredSession);
+    assert.equal(recovered.offer.id, recoveredSession.quote.offer_id);
+    assert.equal(recoveredSession.requirement.urgency, 'this_week');
+    assert.equal(
+      correlations.findByProtocolRef('AIP', 'session', SESSION)?.workflow_id,
+      reservedCorrelation.workflow_id
+    );
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('correlation-only recovery fails closed when the replay reservation was not durable', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'agent-service-interop-correlation-only-recovery-'));
+  const fsmPath = join(dir, 'fsm.json');
+  const correlationPath = join(dir, 'correlations.json');
+
+  class FailOnceFsmStore extends FileFsmStore {
+    private fail = true;
+
+    override upsertOffer(input: Parameters<FileFsmStore['upsertOffer']>[0]) {
+      if (this.fail) {
+        this.fail = false;
+        throw new Error('injected FSM write failure');
+      }
+      return super.upsertOffer(input);
+    }
+  }
+
+  try {
+    const correlations = new FileWorkflowCorrelationStore(correlationPath);
+    const firstAdapter = new PlumbingAipAdapter({
+      store: new FailOnceFsmStore(fsmPath),
+      correlations,
+      replays: new MemoryAipReplayStore(),
+      now: () => new Date('2026-08-14T22:30:00.000Z'),
+      workflowIdFactory: () => 'memory-replay-recovery'
+    });
+
+    assert.throws(
+      () => firstAdapter.submit(intake(), 'https://adapter.example'),
+      /injected FSM write failure/
+    );
+    assert.ok(correlations.findByProtocolRef('AIP', 'session', SESSION));
+    assert.equal(new FileFsmStore(fsmPath).getBySession(SESSION), undefined);
+
+    const restartedAdapter = new PlumbingAipAdapter({
+      store: new FileFsmStore(fsmPath),
+      correlations: new FileWorkflowCorrelationStore(correlationPath),
+      replays: new MemoryAipReplayStore(),
+      now: () => new Date('2026-08-14T22:31:00.000Z')
+    });
+
+    assert.throws(
+      () => restartedAdapter.submit(intake(), 'https://adapter.example'),
+      (error: any) => error?.code === 'IDEMPOTENCY_CONFLICT' && error?.httpStatus === 409
+    );
+    assert.equal(new FileFsmStore(fsmPath).getBySession(SESSION), undefined);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('legacy fingerprint-less Bind replay fails closed instead of guessing historical extensions', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'agent-service-interop-legacy-bind-replay-'));
+  const statePath = join(dir, 'fsm.json');
+  const store = new FileFsmStore(statePath);
+  const adapter = new PlumbingAipAdapter({ store, now: () => new Date('2026-08-14T22:30:00.000Z') });
+
+  try {
+    const offer = adapter.submit(intake(), 'https://adapter.example').offer;
+    const originalBind = {
+      offer_id: offer.id,
+      session_id: SESSION,
+      bind_data: {
+        full_name: 'Jane Fixture',
+        phone: '+1-555-0100',
+        address: ADDRESS,
+        provider_extension: { ticket: 'historical-ext-001' }
+      },
+      agent: { id: 'fixture-agent-001', consent_scope: ['intake', 'offer', 'bind'] }
+    };
+    adapter.bind(originalBind);
+    const before = structuredClone(store.getBySession(SESSION));
+    assert.ok(before?.binding?.request_fingerprint);
+
+    const raw = JSON.parse(readFileSync(statePath, 'utf8')) as any;
+    delete raw.sessions[SESSION].binding.request_fingerprint;
+    writeFileSync(statePath, `${JSON.stringify(raw, null, 2)}\n`, 'utf8');
+
+    const restarted = new PlumbingAipAdapter({ store: new FileFsmStore(statePath) });
+    const replay = structuredClone(originalBind) as any;
+    delete replay.bind_data.provider_extension;
+    assert.throws(
+      () => restarted.bind(replay),
+      (error: any) => error?.code === 'IDEMPOTENCY_CONFLICT' && error?.httpStatus === 409
+    );
+    const after = new FileFsmStore(statePath).getBySession(SESSION);
+    assert.equal(after?.job.scheduled_for, before?.job.scheduled_for);
+    assert.equal(after?.binding?.phone, before?.binding?.phone);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('persisted replay plan cannot overwrite or recorrelate mismatched FSM identifiers', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'agent-service-interop-replay-fsm-mismatch-'));
+  const fsmPath = join(dir, 'fsm.json');
+  const replayPath = join(dir, 'replays.json');
+  const store = new FileFsmStore(fsmPath);
+  const replays = new FileAipReplayStore(replayPath);
+
+  try {
+    const request = intake();
+    store.upsertOffer({
+      request,
+      offerId: 'offer-fsm',
+      requirementId: 'req-fsm',
+      quoteId: 'quote-fsm',
+      jobId: 'job-fsm',
+      validUntil: '2026-08-21T22:30:00.000Z'
+    });
+    replays.claim(SESSION, intakeReplayFingerprint(request), () => ({
+      session_id: SESSION,
+      request_fingerprint: intakeReplayFingerprint(request),
+      workflow_id: 'wf-replay-other',
+      offer_id: 'offer-other',
+      requirement_id: 'req-other',
+      quote_id: 'quote-other',
+      job_id: 'job-other',
+      valid_until: '2026-08-22T22:30:00.000Z'
+    }));
+
+    const adapter = new PlumbingAipAdapter({ store, replays });
+    assert.throws(
+      () => adapter.submit(request, 'https://adapter.example'),
+      (error: any) => error?.code === 'IDEMPOTENCY_CONFLICT' && error?.httpStatus === 409
+    );
+    assert.equal(store.getBySession(SESSION)?.quote.offer_id, 'offer-fsm');
+    assert.equal(store.getBySession(SESSION)?.job.job_id, 'job-fsm');
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('legacy mismatched FSM and AIP correlation fails closed before creating replay state', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'agent-service-interop-legacy-mismatch-'));
+  const fsmPath = join(dir, 'fsm.json');
+  const replayPath = join(dir, 'replays.json');
+  const store = new FileFsmStore(fsmPath);
+  const correlations = new MemoryWorkflowCorrelationStore();
+
+  try {
+    const request = intake();
+    store.upsertOffer({
+      request,
+      offerId: 'offer-fsm',
+      requirementId: 'req-fsm',
+      quoteId: 'quote-fsm',
+      jobId: 'job-fsm',
+      validUntil: '2026-08-21T22:30:00.000Z'
+    });
+    correlations.put({
+      workflow_id: 'wf-legacy-split',
+      operational_refs: [
+        { system: 'file_backed_fsm', object_type: 'requirement', id: 'req-other' },
+        { system: 'file_backed_fsm', object_type: 'quote', id: 'quote-other' },
+        { system: 'file_backed_fsm', object_type: 'job', id: 'job-other' }
+      ],
+      protocol_refs: [
+        { protocol: 'AIP', object_type: 'session', id: SESSION },
+        { protocol: 'AIP', object_type: 'offer', id: 'offer-other' }
+      ]
+    });
+
+    const adapter = new PlumbingAipAdapter({
+      store,
+      correlations,
+      replays: new FileAipReplayStore(replayPath),
+      now: () => new Date('2026-08-14T22:30:00.000Z')
+    });
+
+    assert.throws(
+      () => adapter.submit(request, 'https://adapter.example'),
+      (error: any) => error?.code === 'IDEMPOTENCY_CONFLICT' && error?.httpStatus === 409
+    );
+    assert.equal(existsSync(replayPath), false, 'mismatched legacy state must fail before creating replay state');
+    assert.equal(store.getBySession(SESSION)?.quote.offer_id, 'offer-fsm');
+    assert.equal(
+      correlations.findByProtocolRef('AIP', 'session', SESSION)?.protocol_refs.find((ref) => ref.object_type === 'offer')?.id,
+      'offer-other'
+    );
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
 test('AIP-backed workflow correlation is independent from session identity and stable across intake retry', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'agent-service-interop-correlation-'));
   const store = new FileFsmStore(join(dir, 'fsm.json'));
@@ -339,6 +702,7 @@ test('AIP-backed workflow correlation is independent from session identity and s
   const adapter = new PlumbingAipAdapter({
     store,
     correlations,
+    replays: new MemoryAipReplayStore(),
     now: () => new Date('2026-08-14T22:30:00.000Z'),
     idFactory: randomUUID,
     workflowIdFactory: () => `correlation-${++workflowCounter}`
@@ -365,6 +729,20 @@ test('AIP-backed workflow correlation is independent from session identity and s
     const persistedOperationalState = store.getBySession(SESSION);
     assert.ok(persistedOperationalState);
     assert.equal('workflow_id' in persistedOperationalState, false, 'interop correlation must not be persisted into the operational FSM session');
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('workflow correlation cannot be enabled without an explicit replay store', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'agent-service-interop-replay-required-'));
+  try {
+    const store = new FileFsmStore(join(dir, 'fsm.json'));
+    const correlations = new MemoryWorkflowCorrelationStore();
+    assert.throws(
+      () => new PlumbingAipAdapter({ store, correlations }),
+      /replay store is required when workflow correlation is enabled/
+    );
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
