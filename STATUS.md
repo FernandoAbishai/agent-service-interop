@@ -1,12 +1,12 @@
 # Project status
 
-_Last updated: 2026-09-06_
+_Last updated: 2026-09-07_
 
 ## Current stage
 
-**Experimental interoperability testbed through TH-INTEROP-20 neutral-correlation gate**
+**Experimental interoperability + pre-specification protocol-design testbed through TH-INTEROP-21 replay/write-safety gate**
 
-No production interoperability or protocol-certification claims are made.
+Strategic direction: use evidence from this testbed to converge toward a preferably universal, authority-aware TriHerm protocol for agent-to-business/economic coordination. No production interoperability, protocol-certification, stability, or universality claims are made today.
 
 ## What exists
 
@@ -54,6 +54,7 @@ No production interoperability or protocol-certification claims are made.
 - [ ] OpenAPI contract/runtime validation
 - [x] Synthetic AIP intake/Bind replay conflicts and exact-retry semantics
 - [x] Cross-process serialized + atomic file-backed FSM/correlation/replay writes
+- [x] Explicit pre-specification TriHerm protocol thesis and universality/evidence guardrails
 - [ ] External-system write preconditions/reconciliation semantics
 - [ ] Real ServiceTitan/API adapter
 - [ ] Multi-system authority/provenance test against two live systems
@@ -68,7 +69,8 @@ No production interoperability or protocol-certification claims are made.
 | Quoting is a new primitive | Rejected |
 | Agent-facing service intake is absent | Rejected; AIP is direct prior art |
 | Evidence-conditioned settlement is empty territory | Rejected |
-| A new TriHerm protocol is required | Unsupported |
+| TriHerm should deliberately pursue a coordination protocol | Strategic objective; now explicit in the protocol thesis |
+| A TriHerm protocol is already required by evidence or proven universal | Not supported; necessity and universality remain falsification targets |
 | Canonical state should be the operational source of truth | Rejected as the current architecture direction |
 | AIP can be projected onto the current synthetic plumbing FSM without replacing it | Supported by executable tests |
 | Bind proves external authorization/delegation | Not supported; current adapter checks declared Bind scope + same agent ID only |
@@ -97,6 +99,8 @@ No production interoperability or protocol-certification claims are made.
 ## Authority model
 
 The canonical model is treated as a **normalized interoperability representation**, not as the authoritative operational database.
+
+This authority model is also a protocol-design constraint: a future TriHerm protocol may coordinate or reference authoritative state, but protocol participation alone must not silently transfer operational authority into the interoperability layer.
 
 For writes:
 
@@ -175,14 +179,14 @@ See `openapi.yaml`, `research/th-interop-19-x402-public-resource-boundary.md`, a
 
 ## Next gate
 
-Do **not** migrate `Occurrence` into `service-workflow.schema.json` automatically just because the first live-system gate passed.
+PR #21 establishes the protocol thesis only; it does not promote any experimental schema to a normative protocol contract. Do **not** migrate `Occurrence` or other candidate concepts into a protocol kernel merely because they appear in the thesis.
 
 The observation vocabulary has now earned stronger evidence: one ServiceTitan-shaped operational model and one real Jobber API model map into it without invented lifecycle, schedule, completion, or customer-acceptance semantics. The next architectural decision is whether that is sufficient for canonical-schema promotion or whether a second live operational source should be required first.
 
-The accidental AIP-origin dependency in shared correlation/inspection has now been removed at the synthetic architecture level, and the synthetic AIP/file writer has bounded replay/concurrency hardening. The next stronger falsifier is a second live operational origin using the same correlation/reference separation without invented facets. In parallel, provenance, OpenAPI contract checks, and real external-write preconditions/reconciliation should be hardened.
+The accidental AIP-origin dependency in shared correlation/inspection has now been removed at the synthetic architecture level, and the synthetic AIP/file writer has bounded replay/concurrency hardening. The next specification-oriented gate is to define a **minimal protocol kernel v0.1-experimental** around identity/reference structure, authority, provenance, versioning/extensions, and capability negotiation without introducing a universal economic FSM. The stronger operational falsifier remains a second live origin using the same separation without invented facets.
 
 After that, test another live connectivity path while preserving Jobber as the control condition: either a direct second operational API or an integration substrate such as Agave. The question is whether outsourced connectivity preserves source identity, authority, provenance, occurrence boundaries, and native state well enough that TriHerm does not need to build every adapter directly.
 
 Separately, resolve the exact canonical money representation before decimal-valued quotes or payment/UBL/UCP mappings.
 
-No UCP extension or `com.triherm.*` namespace should be introduced until a concrete interoperability need survives implementation.
+No public stable namespace or normative TriHerm capability should be frozen merely from the thesis. Candidate protocol semantics must continue to survive implementation and falsification before they are promoted into a versioned contract.

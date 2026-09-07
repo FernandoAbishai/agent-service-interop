@@ -1,6 +1,6 @@
 # Contract status and version boundaries
 
-This repository is an interoperability research testbed with executable reference adapters. It does **not** currently publish a TriHerm protocol or claim that its experimental schemas are stable normative standards.
+This repository is an interoperability research testbed and pre-specification laboratory with executable reference adapters. Its strategic objective is to converge toward a TriHerm coordination protocol, but it does **not** currently publish a stable/normative TriHerm protocol or claim that its experimental schemas are universal standards.
 
 ## Contract classes
 
@@ -29,6 +29,8 @@ External versions are inputs to an experiment, not versions of a repository-loca
 
 The v0.3 `workflow_id` is repository-local/internal correlation. It is not added to AIP as a protocol field, and this repository does not yet define private correlation discovery or entitlement semantics.
 
+These local contracts may provide evidence for a future protocol kernel, but none becomes normative merely by being repository-local or versioned as experimental.
+
 Historical canonical projection requires that correlation ID explicitly; there is no current implicit `wf-{aip_session_id}` identity default. The only AIP-derived workflow lookup retained is the narrowly scoped read compatibility path for genuinely pre-correlation state.
 
 ### Historical artifacts
@@ -45,7 +47,7 @@ There is no stable backward-compatibility guarantee for repository-local experim
 4. preserve source/protocol IDs as references rather than silently reinterpreting them;
 5. avoid presenting an experimental change as a new protocol standard.
 
-Before a repository-local contract is described as stable or normative, the project should have at minimum a conformance suite, an explicit compatibility/versioning policy, and evidence from independent implementations or operational origins.
+Before a repository-local contract is described as stable, normative, or universal, the project should have at minimum a conformance suite, an explicit compatibility/versioning policy, evidence from independent implementations and operational origins, and an authority/provenance model that survives those mappings.
 
 ## Known contract gaps from the 2026-09-06 audit
 

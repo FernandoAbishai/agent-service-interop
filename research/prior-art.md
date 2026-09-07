@@ -4,7 +4,7 @@ _Last checked: 2026-08-14. This file is a research map, not a standards-status c
 
 ## Why this file exists
 
-The project does not start from the assumption that agent-service commerce needs a new protocol. The first job is to identify what already exists and where the deployment boundary remains.
+The project now has an explicit strategic objective to pursue a preferably universal TriHerm coordination protocol. That does **not** change the prior-art discipline: the first job for every candidate primitive is still to identify what already exists, reuse it where it fits, and isolate only the coordination boundary that existing protocols and operational systems do not solve together.
 
 | Project / standard | What it contributes | What this project should reuse | Boundary relevant to this experiment |
 |---|---|---|---|
@@ -56,6 +56,6 @@ Do not encode a timeless rule from one UCP release. Record the exact UCP version
 
 ## Current working hypothesis
 
-> Protocol primitives are increasingly available. The harder deployment problem may be translating between those protocols and the fragmented operational systems where real-world service work is actually run.
+> Protocol primitives are increasingly available. A useful TriHerm protocol may therefore need to standardize the smallest authority-aware coordination boundary **between** those protocols and the fragmented operational systems where real-world economic activity is executed, rather than duplicate existing discovery, messaging, procurement, or payment protocols.
 
-This is a hypothesis to falsify, not a repository tagline to treat as proven fact.
+This remains a hypothesis to falsify. The strategic goal is to pursue the protocol; the existence, exact size, and universality of its kernel are not treated as proven facts.

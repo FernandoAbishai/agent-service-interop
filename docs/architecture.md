@@ -1,6 +1,6 @@
-# Architecture: normalized interoperability state without operational authority
+# Architecture: authority-aware interoperability toward a protocol kernel
 
-_Status: architectural direction for the experiment, not a production platform contract._
+_Status: architectural direction for the experiment and future protocol kernel, not a production or normative protocol contract._
 
 ## Decision
 
@@ -11,6 +11,8 @@ This repository adopts the following working architectural principle:
 A canonical representation may eventually be persisted for correlation, provenance, reconciliation, or multi-protocol projection. Persistence alone does not make it the source of truth for provider operations.
 
 The implementation should therefore grow with the simplicity of a derived projection while preserving a path toward a horizontal interoperability layer.
+
+The strategic objective is now explicit: if the evidence continues to support it, that horizontal layer should converge into a preferably universal **TriHerm coordination protocol**. "Universal" applies to the smallest stable coordination semantics that survive heterogeneous systems; it does not imply a universal operational schema or centralized source of truth.
 
 ## Correlation is separate from operational authority
 
@@ -110,6 +112,8 @@ This table is experiment-specific. A real integration must document authority ex
 7. **Canonical persistence, event sourcing, conflict resolution, and orchestration are not implied by this decision.** They require separate evidence.
 8. **Correlation does not imply authority.** `workflow_id` links references but cannot authorize or mutate operational state.
 9. **Protocol references and operational references remain separate.** An AIP/A2A identifier is never silently promoted into operational identity, and an operational object ID is never presented as a protocol identity.
+10. **Universality must be earned by independent mappings.** A concept is not part of the future protocol kernel merely because the synthetic plumbing adapter exposes it.
+11. **The protocol kernel should be smaller than the union of its adapters.** Vertical and system-specific semantics remain extensions, references, or source-native data unless cross-system coordination requires a stable common meaning.
 
 ## Future multi-system classification
 
@@ -122,7 +126,7 @@ When comparing multiple real FSM/CRM/ERP systems, candidate concepts should be c
 - `SYSTEM_SPECIFIC` — belongs to one operational platform and should remain there;
 - `NOT_NORMALIZABLE` — mapping would lose decision-critical meaning or create false equivalence.
 
-The goal is not to maximize the size of the canonical model. The goal is to find the smallest stable translation boundary that survives multiple systems and protocols.
+The goal is not to maximize the size of the canonical model. The goal is to find the smallest stable coordination and translation boundary that survives multiple systems and protocols and can therefore be considered for a future TriHerm protocol kernel.
 
 ## What is deliberately undecided
 
@@ -133,11 +137,10 @@ This architecture does **not** yet decide that the project needs:
 - a workflow engine;
 - distributed transactions;
 - conflict-resolution machinery;
-- a universal service/order/fulfillment schema;
-- a TriHerm-specific public protocol;
+- a universal service/order/fulfillment business-object schema;
 - a provider-independent source of truth for all workflow stages.
 
-Those components should be introduced only when implementation evidence requires them.
+The strategic decision to pursue a TriHerm coordination protocol is made; its exact primitives, public namespace, wire representation, transport bindings, compatibility commitments, and normative status remain undecided. Those details should be introduced only when implementation evidence requires and supports them.
 
 ## Falsification / narrowing conditions
 

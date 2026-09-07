@@ -1,8 +1,8 @@
 # Protocol-to-workflow crosswalk
 
-This crosswalk maps one **residential plumbing** workflow to existing protocol concepts. It intentionally separates protocol-native concepts from experimental translation concepts.
+This crosswalk maps one **residential plumbing** workflow to existing protocol concepts. It intentionally separates protocol-native concepts, system-native semantics, and candidate TriHerm coordination concepts.
 
-A workflow stage is **not automatically a canonical primitive**. The stages below are a reference sequence used to compare protocol/system coverage; TH-INTEROP-15 separately determines which concepts, if any, deserve a normalized interoperability representation.
+A workflow stage is **not automatically a protocol primitive**. The stages below are a reference sequence used to compare protocol/system coverage and determine which concepts, if any, can earn a place in a future TriHerm coordination kernel.
 
 ## Reference workflow stages
 
@@ -34,7 +34,7 @@ A workflow stage is **not automatically a canonical primitive**. The stages belo
 
 ### 1. Protocols are views, not the database
 
-The canonical model is not intended to replace AIP, UCP, UBL, MCP, A2A, or a field-service system. It exists only to test whether a single operational state can be represented across multiple external views without semantic loss.
+The future TriHerm protocol is not intended to replace AIP, UCP, UBL, MCP, A2A, or a field-service system. The current normalized representations test whether independent systems and protocols can share stable coordination semantics without semantic loss.
 
 ### 2. The business system remains authoritative for execution
 
@@ -55,3 +55,7 @@ Every future UCP/AIP/A2A/MCP fixture must include the version/date against which
 ### 6. Stage coverage does not imply primitive ownership
 
 A concept can appear in the end-to-end workflow while remaining `REFERENCE_ONLY`, `PROTOCOL_SPECIFIC`, `SYSTEM_SPECIFIC`, or `DEFERRED`. See `research/minimal-economic-primitives.md` for the current gate.
+
+### 7. Protocol ambition does not waive the evidence gate
+
+The project deliberately aims toward a TriHerm protocol, but a concept becomes part of its kernel only after it survives independent system/protocol mappings without false equivalence. Existing standards should be composed or referenced rather than reimplemented under new names.

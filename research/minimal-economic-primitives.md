@@ -1,6 +1,6 @@
 # TH-INTEROP-15 — Minimal Economic Primitive Set
 
-_Status: architecture falsification gate. TH-INTEROP-16 narrowing result accepted. This document does not define a public TriHerm protocol and does not promote new fields into the canonical schema._
+_Status: architecture falsification gate. TH-INTEROP-16 narrowing result accepted. This document is evidence for the future TriHerm protocol thesis; it does not by itself define a public/normative protocol or promote new fields into the canonical schema._
 
 _Last checked against primary sources: 2026-08-16._
 
@@ -8,7 +8,7 @@ _Last checked against primary sources: 2026-08-16._
 
 What is the smallest semantic set TriHerm actually needs to normalize in order to coordinate a real service transaction across agents, protocols, and existing business systems without duplicating standards or taking operational authority away from those systems?
 
-The goal is deliberately smaller than an end-to-end universal commerce schema.
+The goal is deliberately smaller than an end-to-end universal commerce schema. Under the current protocol thesis, this narrowing is a feature: a preferably universal TriHerm coordination kernel should contain only the semantics that survive these gates, not the union of every workflow stage.
 
 ## Core rule: workflow stage != canonical primitive
 
