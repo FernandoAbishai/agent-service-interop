@@ -58,7 +58,14 @@ function pathKind(path: string): LockPathKind {
 
 function parseOwner(serialized: string, label: string): LockOwner {
   const owner = JSON.parse(serialized) as Partial<LockOwner>;
-  if (owner.version !== 1 || !Number.isInteger(owner.pid) || typeof owner.token !== 'string' || owner.token.length === 0) {
+  if (
+    owner.version !== 1 ||
+    typeof owner.pid !== 'number' ||
+    !Number.isSafeInteger(owner.pid) ||
+    owner.pid <= 0 ||
+    typeof owner.token !== 'string' ||
+    owner.token.length === 0
+  ) {
     throw new Error(`Malformed file-state lock owner: ${label}`);
   }
   return owner as LockOwner;

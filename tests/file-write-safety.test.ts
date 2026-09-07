@@ -9,7 +9,7 @@ import { FileFsmStore } from '../src/fsm-store.ts';
 import { FileWorkflowCorrelationStore } from '../src/workflow-correlation.ts';
 import { FileAipReplayStore } from '../src/aip-replay-store.ts';
 import { intakeReplayFingerprint } from '../src/idempotency.ts';
-import { atomicWriteJson } from '../src/file-state.ts';
+import { atomicWriteJson, withFileLock } from '../src/file-state.ts';
 
 
 async function waitUntil(predicate: () => boolean, timeoutMs = 2_000): Promise<void> {
@@ -80,6 +80,27 @@ test('legacy empty lock directory is never replaced by the current lock format',
       /Legacy file-state lock directory is still present/
     );
     assert.equal(existsSync(lockPath), true, 'legacy lock must remain untouched for fail-closed migration safety');
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('malformed current lock owner PIDs fail closed without deleting the lock', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'agent-service-interop-malformed-lock-'));
+
+  try {
+    for (const [index, pid] of [0, -1, Number.MAX_SAFE_INTEGER + 1].entries()) {
+      const statePath = join(dir, `state-${index}.json`);
+      const lockPath = `${statePath}.lock`;
+      const serialized = `${JSON.stringify({ version: 1, pid, token: `malformed-${index}` })}\n`;
+      writeFileSync(lockPath, serialized, { mode: 0o600 });
+
+      assert.throws(
+        () => withFileLock(statePath, () => {}),
+        /Malformed file-state lock owner/
+      );
+      assert.equal(readFileSync(lockPath, 'utf8'), serialized, 'malformed lock must remain untouched');
+    }
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
