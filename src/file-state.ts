@@ -12,6 +12,7 @@ import {
 import { dirname } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { spawn } from 'node:child_process';
+import { createRequire } from 'node:module';
 
 function envMs(name: string, fallback: number): number {
   const value = Number(process.env[name] ?? fallback);
@@ -25,13 +26,15 @@ const LOCK_RETRY_COUNT = 700;
 const ACQUIRE_WAIT_MS = 40_000;
 const RELEASE_WAIT_MS = 10_000;
 const waiter = new Int32Array(new SharedArrayBuffer(Int32Array.BYTES_PER_ELEMENT));
+const moduleRequire = createRequire(import.meta.url);
+const PROPER_LOCKFILE_MODULE = moduleRequire.resolve('proper-lockfile');
 
 // The helper owns the lease so its heartbeat keeps running even while the caller's
 // synchronous read/modify/write section blocks the caller event loop.
 const LOCK_HELPER_SOURCE = String.raw`
   const fs = require('node:fs');
   const path = require('node:path');
-  const lockfile = require('proper-lockfile');
+  const lockfile = require(process.env.THI_LOCK_MODULE);
   const filePath = process.env.THI_LOCK_FILE;
   const controlPath = process.env.THI_LOCK_CONTROL;
   const parentPid = Number(process.env.THI_LOCK_PARENT_PID);
@@ -126,6 +129,7 @@ export function withFileLock<T>(filePath: string, run: () => T): T {
       THI_LOCK_FILE: filePath,
       THI_LOCK_CONTROL: controlPath,
       THI_LOCK_PARENT_PID: String(process.pid),
+      THI_LOCK_MODULE: PROPER_LOCKFILE_MODULE,
       THI_LOCK_STALE_MS: String(LOCK_STALE_MS),
       THI_LOCK_UPDATE_MS: String(LOCK_UPDATE_MS),
       THI_LOCK_RETRY_MS: String(LOCK_RETRY_MS),

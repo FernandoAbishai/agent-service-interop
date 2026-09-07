@@ -20,10 +20,12 @@ async function waitUntil(predicate: () => boolean, timeoutMs = 2_000): Promise<v
   throw new Error('timed out waiting for test condition');
 }
 
-function runNode(script: string, env: Record<string, string>): Promise<void> {
+const REPO_ROOT = new URL('..', import.meta.url).pathname;
+
+function runNode(script: string, env: Record<string, string>, cwd = REPO_ROOT): Promise<void> {
   return new Promise((resolve, reject) => {
     const child = spawn(process.execPath, ['--experimental-strip-types', '--input-type=module', '-e', script], {
-      cwd: new URL('..', import.meta.url).pathname,
+      cwd,
       env: { ...process.env, ...env },
       stdio: ['ignore', 'pipe', 'pipe']
     });
@@ -36,6 +38,47 @@ function runNode(script: string, env: Record<string, string>): Promise<void> {
     });
   });
 }
+
+test('file lock helper resolves its dependency independently from caller cwd', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'agent-service-interop-lock-cwd-'));
+  const statePath = join(dir, 'state.json');
+  const markerPath = join(dir, 'marker');
+  const moduleUrl = new URL('../src/file-state.ts', import.meta.url).href;
+  const script = `
+    import { writeFileSync } from 'node:fs';
+    const { withFileLock } = await import(process.env.MODULE_URL);
+    withFileLock(process.env.STATE_PATH, () => writeFileSync(process.env.MARKER_PATH, 'ok'));
+  `;
+
+  try {
+    await runNode(script, { STATE_PATH: statePath, MARKER_PATH: markerPath, MODULE_URL: moduleUrl }, dir);
+    assert.equal(readFileSync(markerPath, 'utf8'), 'ok');
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('lock helper releases promptly when its writer process dies', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'agent-service-interop-lock-parent-crash-'));
+  const statePath = join(dir, 'state.json');
+  const markerPath = join(dir, 'marker');
+  const script = `
+    import { writeFileSync } from 'node:fs';
+    import { withFileLock } from './src/file-state.ts';
+    withFileLock(process.env.STATE_PATH, () => {
+      writeFileSync(process.env.MARKER_PATH, 'locked');
+      process.kill(process.pid, 'SIGKILL');
+    });
+  `;
+
+  try {
+    await assert.rejects(runNode(script, { STATE_PATH: statePath, MARKER_PATH: markerPath }), /child exited/);
+    assert.equal(existsSync(markerPath), true);
+    await waitUntil(() => !existsSync(`${statePath}.lock`), 2_000);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
 
 test('concurrent FSM writers preserve every distinct session and readers never see partial JSON', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'agent-service-interop-fsm-concurrency-'));
