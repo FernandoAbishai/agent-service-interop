@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { randomUUID } from 'node:crypto';
@@ -9,6 +9,7 @@ import { FileFsmStore } from '../src/fsm-store.ts';
 import { FileWorkflowCorrelationStore } from '../src/workflow-correlation.ts';
 import { FileAipReplayStore } from '../src/aip-replay-store.ts';
 import { intakeReplayFingerprint } from '../src/idempotency.ts';
+import { atomicWriteJson } from '../src/file-state.ts';
 
 
 async function waitUntil(predicate: () => boolean, timeoutMs = 2_000): Promise<void> {
@@ -53,6 +54,51 @@ test('file lock works independently from caller cwd', async () => {
   try {
     await runNode(script, { STATE_PATH: statePath, MARKER_PATH: markerPath, MODULE_URL: moduleUrl }, dir);
     assert.equal(readFileSync(markerPath, 'utf8'), 'ok');
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('legacy empty lock directory is never replaced by the current lock format', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'agent-service-interop-legacy-lock-'));
+  const statePath = join(dir, 'state.json');
+  const lockPath = `${statePath}.lock`;
+  const moduleUrl = new URL('../src/file-state.ts', import.meta.url).href;
+  const script = `
+    const { withFileLock } = await import(process.env.MODULE_URL);
+    withFileLock(process.env.STATE_PATH, () => {});
+  `;
+
+  try {
+    mkdirSync(lockPath);
+    await assert.rejects(
+      runNode(script, {
+        STATE_PATH: statePath,
+        MODULE_URL: moduleUrl,
+        THI_FILE_LOCK_WAIT_TIMEOUT_MS: '100'
+      }, dir),
+      /Legacy file-state lock directory is still present/
+    );
+    assert.equal(existsSync(lockPath), true, 'legacy lock must remain untouched for fail-closed migration safety');
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('atomic JSON replacement preserves private mode and creates new state as 0600', () => {
+  if (process.platform === 'win32') return;
+  const dir = mkdtempSync(join(tmpdir(), 'agent-service-interop-file-mode-'));
+  const existingPath = join(dir, 'existing.json');
+  const newPath = join(dir, 'new.json');
+
+  try {
+    writeFileSync(existingPath, '{}\n', { mode: 0o600 });
+    chmodSync(existingPath, 0o600);
+    atomicWriteJson(existingPath, { sensitive: true });
+    assert.equal(statSync(existingPath).mode & 0o777, 0o600);
+
+    atomicWriteJson(newPath, { sensitive: true });
+    assert.equal(statSync(newPath).mode & 0o777, 0o600);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
@@ -119,11 +165,10 @@ test('a crashed recovery claimant does not pin a dead writer lock', () => {
   const statePath = join(dir, 'fsm.json');
   const lockPath = `${statePath}.lock`;
   const deadOwnerToken = 'dead-owner-token';
-  const recoveryPath = join(lockPath, `.recover-${deadOwnerToken}`);
+  const recoveryPath = `${lockPath}.recover-${deadOwnerToken}`;
 
   try {
-    mkdirSync(lockPath);
-    writeFileSync(join(lockPath, 'owner.json'), `${JSON.stringify({
+    writeFileSync(lockPath, `${JSON.stringify({
       version: 1,
       pid: 2_147_483_646,
       token: deadOwnerToken

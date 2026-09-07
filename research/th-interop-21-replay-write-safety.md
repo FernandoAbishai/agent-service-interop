@@ -65,7 +65,11 @@ The file-backed FSM, correlation store, and AIP replay store use:
 
 Readers therefore see the prior complete JSON document or the next complete document, not an in-progress rewrite. Distinct concurrent writers are serialized so updates are not silently lost.
 
-Lock ownership is tied directly to the live writer process with a versioned `PID + token` owner record published atomically as a lock directory. A live owner is never recovered merely because time passed, so a long synchronous section or suspended event loop cannot have its lock stolen. If the owner PID is dead, a contender first creates an owner-token-specific recovery claim inside that lock generation, re-reads the owner, and only then atomically renames the complete generation away from the fixed lock path. Recovery claims are themselves `PID + token` owned; a dead recovery claimant is quarantined by its exact token before another claimant retries, so a crash during recovery cannot pin the original dead writer indefinitely. A delayed observer that lands in a successor generation cannot pass the owner revalidation. Normal release also renames the complete owned generation away atomically before deleting it, so contenders never observe an empty live-lock directory. Acquisition waits are bounded. This is local-filesystem coordination, not a distributed lock for network/object storage.
+Lock ownership is tied directly to the live writer process with a versioned `PID + token` owner record. The record is prepared and `fsync`ed first, then published as the live lock with a same-filesystem hard link using no-overwrite semantics. This means the current implementation never replaces an already-existing lock path, including the empty lock directory used by the immediate `proper-lockfile` predecessor during rolling overlap. A legacy lock directory is treated as unknown/live and waited on only for the bounded acquisition window; it is never auto-deleted by the new code.
+
+A live current-format owner is never recovered merely because time passed, so a long synchronous section or suspended event loop cannot have its lock stolen. If the owner PID is dead, a contender creates an owner-token-specific recovery claim, re-reads the live lock, and only then atomically moves that exact dead generation away from the fixed lock path. Recovery claims are themselves `PID + token` owned; a dead recovery claimant can be quarantined by its exact token before another claimant retries, so a crash during recovery cannot pin the dead writer indefinitely. A delayed observer that lands on a successor generation cannot pass owner/token revalidation. Acquisition waits are bounded. This is local-filesystem coordination, not a distributed lock for network/object storage.
+
+Atomic JSON replacement also preserves the existing file mode. A newly created state file is written as `0600`; replacing an already-hardened `0600` file does not widen it through the temporary-file rename path.
 
 ## Evidence
 
@@ -84,7 +88,9 @@ Deterministic tests cover:
 - concurrent distinct correlation writers preserving every workflow;
 - concurrent recovery after a writer process crashes while holding the lock;
 - recovery proceeding when a prior recovery claimant also crashed;
-- a live writer holding a long synchronous critical section without losing exclusivity.
+- a live writer holding a long synchronous critical section without losing exclusivity;
+- fail-closed coexistence with the predecessor's empty lock-directory format;
+- new state files created as `0600` and existing private file modes preserved across atomic replacement.
 
 ## Still unproven
 
