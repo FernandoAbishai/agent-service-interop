@@ -149,6 +149,47 @@ test('intake rejects PII-shaped extra fields instead of silently accepting them'
   });
 });
 
+test('runtime intake rejects shapes rejected by the pinned upstream schema', async () => {
+  await withServer(async ({ baseUrl, store }) => {
+    const invalidRequests: Array<{ mutate: (request: any) => void; label: string }> = [
+      { label: 'non-string optional agent platform', mutate: (request) => { request.agent.platform = 123; } },
+      { label: 'unknown top-level field', mutate: (request) => { request.unexpected = true; } },
+      { label: 'unknown agent field', mutate: (request) => { request.agent.unexpected = true; } },
+      { label: 'non-object metadata', mutate: (request) => { request.metadata = 'not-an-object'; } },
+      { label: 'invalid metadata locale', mutate: (request) => { request.metadata.locale = 'EN_us'; } },
+      { label: 'invalid metadata timestamp', mutate: (request) => { request.metadata.timestamp = 'yesterday'; } }
+    ];
+
+    for (const candidate of invalidRequests) {
+      const request: any = intake();
+      candidate.mutate(request);
+      const response = await post(baseUrl, '/api/aip/residential-plumbing-quote', request);
+      assert.equal(response.status, 400, candidate.label);
+      const error = await response.json() as any;
+      assert.equal(error.error.code, 'SCHEMA_MISMATCH', candidate.label);
+    }
+
+    assert.deepEqual(store.read().sessions, {}, 'schema-invalid intake must not create operational state');
+  });
+});
+
+test('runtime intake preserves allowed metadata extensions but rejects PII-shaped metadata keys', async () => {
+  await withServer(async ({ baseUrl, store }) => {
+    const allowed: any = intake();
+    allowed.metadata.experiment = { cohort: 'runtime-conformance' };
+    const accepted = await post(baseUrl, '/api/aip/residential-plumbing-quote', allowed);
+    assert.equal(accepted.status, 200);
+
+    const piiRequest: any = intake(SECOND_SESSION);
+    piiRequest.metadata.extension = { customer_phone: '+1-555-0100' };
+    const rejected = await post(baseUrl, '/api/aip/residential-plumbing-quote', piiRequest);
+    assert.equal(rejected.status, 400);
+    const error = await rejected.json() as any;
+    assert.equal(error.error.code, 'SCHEMA_MISMATCH');
+    assert.equal(store.getBySession(SECOND_SESSION), undefined);
+  });
+});
+
 test('bind handoff accepts the quote and schedules the FSM job in the synthetic adapter', async () => {
   await withServer(async ({ baseUrl, store }) => {
     const offerResponse = await post(baseUrl, '/api/aip/residential-plumbing-quote', intake());
@@ -228,6 +269,54 @@ test('bind enforces session, agent, consent and offer expiry', async () => {
     assert.equal(expired.status, 410);
     const error = await expired.json() as any;
     assert.equal(error.error.code, 'OFFER_EXPIRED');
+  });
+});
+
+test('runtime Bind rejects optional shapes rejected by the pinned upstream schema before mutation', async () => {
+  await withServer(async ({ baseUrl, store }) => {
+    const offerResponse = await post(baseUrl, '/api/aip/residential-plumbing-quote', intake());
+    const offer = (await offerResponse.json() as any).offer;
+    const before = structuredClone(store.getBySession(SESSION));
+
+    for (const metadata of ['not-an-object', { user_confirmed_at: 'not-a-date' }]) {
+      const response = await post(baseUrl, '/api/aip/bind', {
+        offer_id: offer.id,
+        session_id: SESSION,
+        bind_data: { full_name: 'Jane Fixture', phone: '+1-555-0100', address: ADDRESS },
+        agent: { id: 'fixture-agent-001', consent_scope: ['intake', 'offer', 'bind'] },
+        metadata
+      });
+      assert.equal(response.status, 400);
+      const error = await response.json() as any;
+      assert.equal(error.error.code, 'SCHEMA_MISMATCH');
+      assert.deepEqual(store.getBySession(SESSION), before, 'schema-invalid Bind must not mutate operational state');
+    }
+  });
+});
+
+test('runtime Bind preserves upstream-extensible bind_data and metadata fields', async () => {
+  await withServer(async ({ baseUrl, store }) => {
+    const offerResponse = await post(baseUrl, '/api/aip/residential-plumbing-quote', intake());
+    const offer = (await offerResponse.json() as any).offer;
+
+    const response = await post(baseUrl, '/api/aip/bind', {
+      offer_id: offer.id,
+      session_id: SESSION,
+      bind_data: {
+        full_name: 'Jane Fixture',
+        phone: '+1-555-0100',
+        address: ADDRESS,
+        company: 'Fixture Services LLC',
+        provider_extension: { ticket: 'ext-001' }
+      },
+      agent: { id: 'fixture-agent-001', consent_scope: ['intake', 'offer', 'bind'] },
+      metadata: { experiment: { cohort: 'runtime-conformance' } }
+    });
+
+    assert.equal(response.status, 200);
+    const state = store.getBySession(SESSION);
+    assert.equal(state?.quote.status, 'accepted');
+    assert.equal(state?.job.status, 'scheduled');
   });
 });
 

@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import type { FsmSession } from './types.ts';
 import { FileFsmStore } from './fsm-store.ts';
 import type { WorkflowCorrelationStore } from './workflow-correlation.ts';
-import { assertNoPiiAtIntake, validateBindRequest, validateIntakeRequest, ValidationError } from './validation.ts';
+import { assertNoPiiAtIntake, assertNoPiiInIntakeRequest, validateBindRequest, validateIntakeRequest, ValidationError } from './validation.ts';
 
 export const AIP_VERSION = '0.1.0';
 export const AIP_SNAPSHOT = '2026-02-27';
@@ -71,6 +71,7 @@ export class PlumbingAipAdapter {
   submit(body: unknown, baseUrl: string) {
     const request = validateIntakeRequest(body);
     assertNoPiiAtIntake(request.intake_data);
+    assertNoPiiInIntakeRequest(request);
 
     const existing = this.options.store.getBySession(request.session_id);
     const session = existing ?? this.options.store.upsertOffer({

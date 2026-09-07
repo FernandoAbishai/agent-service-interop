@@ -50,7 +50,7 @@ Before a repository-local contract is described as stable or normative, the proj
 ## Known contract gaps from the 2026-09-06 audit
 
 - Protocol-neutral correlation has only synthetic evidence so far; a second live operational origin remains untested.
-- Runtime AIP validation is not yet proven equivalent to every constraint in the vendored upstream schemas.
+- Runtime AIP intake and Bind requests are checked against the vendored upstream schemas before adapter-local constraints. This is a runtime conformance gate for those two request shapes, not protocol certification.
 - The manifest declares session-scoped retention, but the file-backed research store does not yet implement expiry/deletion semantics; do not interpret that declaration as a production retention guarantee.
 - The canonical JSON Schema now has fixture/runtime projection tests; the OpenAPI description still lacks dedicated runtime contract validation.
 - The UBL RFQ fixture is a semantic falsifier shape, not a claim of XML/schema conformance to a specific UBL release.
