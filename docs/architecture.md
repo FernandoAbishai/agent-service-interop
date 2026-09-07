@@ -91,8 +91,8 @@ There may be no single authoritative system for an entire economic workflow. Aut
 | State | Current experiment authority | Canonical role |
 |---|---|---|
 | provider identity/configuration | provider fixture / future provider system | normalized reference |
-| intake requirement | accepted AIP intake plus provider adapter | normalized requirement |
-| quote status and amount | file-backed FSM | observed normalized quote |
+| intake/request data in the synthetic plumbing path | accepted AIP intake plus provider adapter | historical normalized fixture plus earned thin `ServiceRequestObservation`; not a universal Requirement primitive |
+| synthetic quote status and numeric amount | file-backed FSM | historical fixture projection only; rich Quote is still a candidate and exact money is unresolved |
 | job status and schedule | file-backed FSM | observed normalized job |
 | AIP offer/session identifiers | AIP adapter | protocol provenance/reference |
 | customer PII at Bind | bind payload with declared consent scope, handed to operational adapter | do not treat as universal canonical identity or authorization proof |

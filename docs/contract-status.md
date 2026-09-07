@@ -11,7 +11,7 @@ These contracts come from external protocols or APIs and are version-pinned wher
 | Input | Pinned version in this repository | Evidence boundary |
 |---|---|---|
 | Agent Intake Protocol | `0.1.0`, snapshot `2026-02-27` | Vendored manifest/intake/offer/bind-request JSON Schemas |
-| A2A Protocol | `1.0` | Official JS SDK `@a2a-js/sdk@1.0.1`; HTTP+JSON surface |
+| A2A Protocol | `1.0.0` | Official JS SDK `@a2a-js/sdk@1.0.1`; HTTP+JSON surface |
 | Jobber GraphQL | `2025-04-16` | Read-only Job/Visit query plus deterministic and opt-in live tests |
 | x402/Circle adapter dependencies | `@x402/core@2.21.0`, `@x402/evm@2.20.0`, `@circle-fin/x402-batching@3.2.0` | Fixed public synthetic inspection resource only |
 
