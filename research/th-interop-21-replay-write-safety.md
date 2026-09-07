@@ -82,6 +82,7 @@ Deterministic tests cover:
 - changed Bind -> 409 / no reschedule;
 - correlation-write failure leaving no new FSM state;
 - correlation-first/FSM-failure recovery with persisted semantic fingerprint;
+- a late same-semantic FSM winner with different reserved identifiers failing closed instead of returning split replay/correlation/operational identity;
 - legacy FSM/correlation or FSM/replay identifier divergence failing closed before re-correlation/mutation;
 - concurrent distinct FSM writers preserving every session;
 - readers not observing partial JSON during concurrent writes;

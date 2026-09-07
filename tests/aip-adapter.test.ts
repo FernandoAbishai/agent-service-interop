@@ -642,6 +642,84 @@ test('persisted replay plan cannot overwrite or recorrelate mismatched FSM ident
   }
 });
 
+test('late same-semantic FSM winner with different reserved identifiers fails closed', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'agent-service-interop-late-fsm-winner-'));
+  const fsmPath = join(dir, 'fsm.json');
+  const replayPath = join(dir, 'replays.json');
+  const store = new FileFsmStore(fsmPath);
+  const replays = new FileAipReplayStore(replayPath);
+  const request = intake();
+  let injected = false;
+
+  class InjectingCorrelationStore extends MemoryWorkflowCorrelationStore {
+    override put(correlation: Parameters<MemoryWorkflowCorrelationStore['put']>[0]) {
+      if (!injected) {
+        injected = true;
+        store.upsertOffer({
+          request,
+          offerId: 'offer-competitor',
+          requirementId: 'req-competitor',
+          quoteId: 'quote-competitor',
+          jobId: 'job-competitor',
+          validUntil: '2026-08-21T22:30:00.000Z'
+        });
+      }
+      return super.put(correlation);
+    }
+  }
+
+  const correlations = new InjectingCorrelationStore();
+  const reservedIds = ['reserved-offer', 'reserved-requirement', 'reserved-quote', 'reserved-job'];
+  let idIndex = 0;
+  const adapter = new PlumbingAipAdapter({
+    store,
+    correlations,
+    replays,
+    now: () => new Date('2026-08-14T22:30:00.000Z'),
+    idFactory: () => reservedIds[idIndex++] ?? `overflow-${idIndex}`,
+    workflowIdFactory: () => 'reserved-workflow'
+  });
+
+  try {
+    assert.throws(
+      () => adapter.submit(request, 'https://adapter.example'),
+      (error: any) => error?.code === 'IDEMPOTENCY_CONFLICT' && error?.httpStatus === 409
+    );
+
+    const winner = store.getBySession(SESSION);
+    assert.equal(winner?.quote.offer_id, 'offer-competitor');
+    assert.equal(winner?.requirement.requirement_id, 'req-competitor');
+    assert.equal(winner?.quote.quote_id, 'quote-competitor');
+    assert.equal(winner?.job.job_id, 'job-competitor');
+
+    const fingerprint = intakeReplayFingerprint(request);
+    const plan = replays.claim(SESSION, fingerprint, () => { throw new Error('existing replay plan expected'); });
+    assert.equal(plan.offer_id, 'reserved-offer');
+    assert.equal(plan.requirement_id, 'req-reserved-requirement');
+    assert.equal(plan.quote_id, 'quote-reserved-quote');
+    assert.equal(plan.job_id, 'job-reserved-job');
+
+    const correlation = correlations.findByProtocolRef('AIP', 'session', SESSION);
+    assert.ok(correlation);
+    assert.equal(
+      correlation.protocol_refs.find((ref) => ref.object_type === 'offer')?.id,
+      'reserved-offer'
+    );
+    assert.equal(
+      correlation.operational_refs.find((ref) => ref.object_type === 'job')?.id,
+      'job-reserved-job'
+    );
+
+    assert.throws(
+      () => adapter.submit(request, 'https://adapter.example'),
+      (error: any) => error?.code === 'IDEMPOTENCY_CONFLICT' && error?.httpStatus === 409
+    );
+    assert.equal(store.getBySession(SESSION)?.quote.offer_id, 'offer-competitor');
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
 test('legacy mismatched FSM and AIP correlation fails closed before creating replay state', () => {
   const dir = mkdtempSync(join(tmpdir(), 'agent-service-interop-legacy-mismatch-'));
   const fsmPath = join(dir, 'fsm.json');

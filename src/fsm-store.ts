@@ -56,6 +56,19 @@ export class FileFsmStore {
             409
           );
         }
+        const sameReservedIdentity =
+          existing.quote.offer_id === input.offerId &&
+          existing.requirement.requirement_id === input.requirementId &&
+          existing.quote.quote_id === input.quoteId &&
+          existing.job.job_id === input.jobId &&
+          existing.quote.valid_until === input.validUntil;
+        if (!sameReservedIdentity) {
+          throw new ValidationError(
+            'IDEMPOTENCY_CONFLICT',
+            'session_id is already associated with different reserved workflow identifiers',
+            409
+          );
+        }
         return existing;
       }
 
